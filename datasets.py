@@ -104,7 +104,7 @@ class Srgb2Linear(object):
         
         shape = image.shape
         image = image.flatten()
-        image = vsrgb_to_linear(image)
+        image = vsrgb2linear(image)
         image = image.reshape(shape)
         
         if type(sample) == dict:
