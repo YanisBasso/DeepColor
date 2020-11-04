@@ -6,8 +6,9 @@ Created on Mon Nov  2 14:14:41 2020
 @author: yanis
 """
 import numpy as np 
-import malplotlib.pyplot as plt 
+import matplotlib.pyplot as plt 
 from numpy.linalg import inv 
+from skimage import io,color 
 
 def px_srgb2linear(x):
         if x <= 0.0:
@@ -84,6 +85,9 @@ def xyz2rgb(xyz):
                   [-0.4985314,  0.0415560,  1.0572252]])
     rgb = np.dot(xyz,M)
     return rgb
+
+def rgb2lab(rgb):
+    return color.rgb2lab(rgb)
 
 ##################################
 # Homography correction 
@@ -176,6 +180,7 @@ def deltaE(I,J):
     dE = np.sqrt(np.sum((I - J)**2,axis = 2))
     dE = np.mean(dE)
     return dE 
+
     
     
 
