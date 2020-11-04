@@ -17,7 +17,7 @@ import matplotlib.pyplot as plt
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms, utils
 from tqdm import tqdm
-import utils 
+from utils import vsrgb2linear
 import cv2 
 
 # Ignore warnings
@@ -237,11 +237,14 @@ def get_dataloader(img_path,target_path, fraction=0.7, batch_size=4):
     """
     data_transforms = {
         'Train': transforms.Compose([ 
+           Srgb2Linear(),
+           RemoveShading(),
            Rescale(225),
            RandomCrop(224),
-           #ColorShift(),
            ToTensor()]),
         'Test': transforms.Compose([
+           Srgb2Linear(),
+           RemoveShading(),
            Rescale(230),
            RandomCrop(224),
            ToTensor()])
