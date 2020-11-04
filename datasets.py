@@ -9,13 +9,16 @@ Created on Mon Nov  2 09:28:40 2020
 from __future__ import print_function, division
 import os
 from pathlib import Path
-import torch
 import pandas as pd
 from skimage import io, transform
 import numpy as np
 import matplotlib.pyplot as plt
+
+
+import torch
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms, utils
+import torchvision.transforms.functional as F
 from tqdm import tqdm
 from utils import vsrgb2linear
 import cv2 
@@ -192,6 +195,37 @@ class Rescale(object):
       elif type(sample) == np.ndarray:
 
         return image
+
+class Normalize(object):
+    def __init__(self, mean, std, inplace=False):
+        self.mean = mean
+        self.std = std
+        self.inplace = inplace
+        self.norm = F.normalize
+    
+    def norm(self,tensor):
+        tensor = F.normalize(tensor, self.mean, self.std, self.inplace)
+        return tensor 
+    
+    def __call__(self,sample):
+        if type(sample) == dict:
+            image,target = sample['image'], sample['target']
+            image = self.norm(image)
+            target = self.norm(target)
+            return {'image': image, 'target': target}
+            
+        elif type(sample) == np.ndarray:
+            image = sample
+            image = self.norm(image)
+            return image
+            
+            
+            
+            
+            
+            
+
+    
       
 
 class RandomCrop(object):
@@ -241,13 +275,17 @@ def get_dataloader(img_path,target_path, fraction=0.7, batch_size=4):
            #RemoveShading(),
            Rescale(225),
            RandomCrop(224),
-           ToTensor()]),
+           ToTensor(),
+           Normalize(mean=[0.485, 0.456, 0.406],
+                     std=[0.229, 0.224, 0.225])]),
         'Test': transforms.Compose([
            #Srgb2Linear(),
            #RemoveShading(),
            Rescale(230),
            RandomCrop(224),
-           ToTensor()])
+           ToTensor(),
+           Normalize(mean=[0.485, 0.456, 0.406],
+                     std=[0.229, 0.224, 0.225])])
     }
 
     image_datasets = {x: GehlerDataset(img_path = img_path,
