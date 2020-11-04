@@ -201,7 +201,6 @@ class Normalize(object):
         self.mean = mean
         self.std = std
         self.inplace = inplace
-        self.norm = F.normalize
     
     def norm(self,tensor):
         tensor = F.normalize(tensor, self.mean, self.std, self.inplace)
@@ -211,22 +210,14 @@ class Normalize(object):
         if type(sample) == dict:
             image,target = sample['image'], sample['target']
             image = self.norm(image)
-            target = self.norm(target)
             return {'image': image, 'target': target}
             
-        elif type(sample) == np.ndarray:
+        elif type(sample) in [np.ndarray,torch.Tensor]:
             image = sample
             image = self.norm(image)
+            print(image)
             return image
             
-            
-            
-            
-            
-            
-
-    
-      
 
 class RandomCrop(object):
     """Crop randomly the image in a sample.

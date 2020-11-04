@@ -16,6 +16,10 @@ import os
 import torch
 import matplotlib.pyplot as plt
 
+# Ignore warnings
+import warnings
+warnings.filterwarnings("ignore")
+
 """
     Version requirements:
         PyTorch Version:  1.2.0
@@ -34,35 +38,29 @@ batchsize = 8
 #summary(model_ft, input_size=(3, 512, 512))
 
 
-# Create the experiment directory if not present
-if not os.path.isdir(bpath):
-    os.mkdir(bpath)
-
-
-# Specify the loss function
-criterion = torch.nn.MSELoss(reduction='mean')
-# Specify the optimizer with a lower learning rate
-optimizer = torch.optim.Adam(model_ft.parameters(), lr=1e-4)
-
-# Specify the evalutation metrics
-metrics = {}
-
-
 # Create the dataloader
-dataloaders = datasets.get_dataloader(img_path,target_path, batch_size=batchsize)
-i = 0
-for samples in iter(dataloaders['Train']):
-    image = samples['image'][0]
-    print('here')
-    i+=1
-    if i == 3 :
-        break
-    def showImgFromTensor(tensor):
-      img = tensor.numpy().transpose((1, 2, 0))
-      plt.figure()
-      plt.imshow(img)
+dataset = datasets.GehlerDataset(img_path = img_path,
+                                target_path = target_path,
+                                transform = None,
+                                seed = 12,
+                                fraction = 0.7,
+                                subset = 'Train')
+
+normalize = datasets.Normalize(mean=[0.485, 0.456, 0.406],
+                     std=[0.229, 0.224, 0.225])
+
+data_transform =  transforms.Compose([ ToTensor(),
+                                       Normalize(mean=[0.485, 0.456, 0.406],
+                                                  std=[0.229, 0.224, 0.225])])
+#data_transform =  transforms.Compose([ ToTensor()])
     
-    showImgFromTensor(image)
+image = dataset[0]['image']
+image = data_transform(image)
+print(image)
+
+
+
+
 
 #trained_model = train_model(model_ft, criterion, dataloaders,
                             #optimizer, bpath=bpath, metrics=metrics, num_epochs=epochs)
