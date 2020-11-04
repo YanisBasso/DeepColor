@@ -75,6 +75,17 @@ def showImgFromTensor(tensor):
     plt.show()
     
 ##################################
+# Color space transformation
+##################################
+    
+def xyz2rgb(xyz):
+    M = np.array([[ 3.2404542, -0.9692660,  0.0556434],
+                  [-1.5371385,  1.8760108, -0.2040259],
+                  [-0.4985314,  0.0415560,  1.0572252]])
+    rgb = np.dot(xyz,M)
+    return rgb
+
+##################################
 # Homography correction 
 ##################################
 
@@ -121,4 +132,52 @@ def als_rg(A,B,max_iter = 50,tol = 10**(-20)):
         errs.append(err)
     
     return errs,D,M
+
+def homographyCorrection(image,A,B):
+    
+    h,w,_ = image.shape
+    image = image.ravel()
+    image = vsrgb2linear(image)
+    linRgbFlat = img_RGB.reshape((h*w,3))
+    
+    _,D,H = als_rg(A,B)
+    
+    xyzFlat = np.dot(linRgbFlat,H1)
+    
+    rgb_corrected = xyz2rgb(xyzFlat)
+    rgb_corrected = vlinear_to_srgb(rgb_corrected.flatten())
+    rgb_corrected = np.reshape(rgb_corrected,(h,w,3))
+    
+    return rgb_corrected
+
+##################################
+# Metrics
+##################################
+
+
+def deltaRG(y_pred,y_true):
+  """
+  Compute the median distance in the rg domain between predictions and 
+  target values
+  
+  :y_pred: network prediction vector 
+  :y_true: target vector computed on color checker 
+  :return: deltaRG
+  """
+  deltaRG = 0
+  for j in range(19):
+    deltaRG += np.sqrt((y_pred[2*j] - y_true[2*j])**2 + (y_pred[2*j+1] - y_true[2*j+1])**2)
+  return deltaRG/19
+
+def deltaE(I,J):
+    """
+    Delta E error 
+    """
+    dE = np.sqrt(np.sum((I - J)**2,axis = 2))
+    dE = np.mean(dE)
+    return dE 
+    
+    
+
+    
 
