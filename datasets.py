@@ -237,14 +237,14 @@ def get_dataloader(img_path,target_path, fraction=0.7, batch_size=4):
     """
     data_transforms = {
         'Train': transforms.Compose([ 
-           Srgb2Linear(),
-           RemoveShading(),
+           #Srgb2Linear(),
+           #RemoveShading(),
            Rescale(225),
            RandomCrop(224),
            ToTensor()]),
         'Test': transforms.Compose([
-           Srgb2Linear(),
-           RemoveShading(),
+           #Srgb2Linear(),
+           #RemoveShading(),
            Rescale(230),
            RandomCrop(224),
            ToTensor()])
