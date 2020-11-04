@@ -64,7 +64,7 @@ def showImgFromTensor(tensor):
     fig.suptitle('Examples of Pre-processed Images',fontsize=20)
     columns = 4
     if imageCount > 4 : 
-        rows = imageCount//columns
+        rows = imageCount//columns + 1
     else :
         rows = 1
     for i in range(imageCount):

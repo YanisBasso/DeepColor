@@ -16,6 +16,8 @@ import os
 import torch
 import matplotlib.pyplot as plt
 
+from utils import *
+
 # Ignore warnings
 import warnings
 warnings.filterwarnings("ignore")
@@ -39,25 +41,10 @@ batchsize = 8
 
 
 # Create the dataloader
-dataset = datasets.GehlerDataset(img_path = img_path,
-                                target_path = target_path,
-                                transform = None,
-                                seed = 12,
-                                fraction = 0.7,
-                                subset = 'Train')
-
-normalize = datasets.Normalize(mean=[0.485, 0.456, 0.406],
-                     std=[0.229, 0.224, 0.225])
-
-data_transform =  transforms.Compose([ ToTensor(),
-                                       Normalize(mean=[0.485, 0.456, 0.406],
-                                                  std=[0.229, 0.224, 0.225])])
-#data_transform =  transforms.Compose([ ToTensor()])
-    
-image = dataset[0]['image']
-image = data_transform(image)
-print(image)
-
+dataloaders = get_dataloader(img_path,target_path, batch_size=batchsize,fraction = 0.002)
+iterator = iter(dataloaders['Train'])
+tensor = next(iterator)['image']
+showImgFromTensor(tensor)
 
 
 
