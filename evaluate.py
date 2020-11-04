@@ -5,7 +5,7 @@ Created on Wed Nov  4 08:26:13 2020
 
 @author: yanis
 """
-import utils 
+from utils import *
 
 def evaluate(model,test_dataset,transform,bpath):
     
