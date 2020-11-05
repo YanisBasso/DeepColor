@@ -7,7 +7,7 @@ Created on Wed Nov  4 08:26:13 2020
 """
 from utils import *
 
-def evaluate(model,test_dataset,transform,bpath):
+def evaluate(model,test_dataset,transform):
     
     since = time.time()
     # Use gpu if available
@@ -19,7 +19,7 @@ def evaluate(model,test_dataset,transform,bpath):
     
     for i,sample in tqdm(enumerate(test_dataset)):
         initialSample = sample
-        sample = data_transforms_tests(sample)
+        sample = transform(sample)
         inputs = sample['image'].to(device)
         inputs = inputs.unsqueeze(0)
         y_true = sample['target'].data.cpu().numpy()
@@ -31,10 +31,10 @@ def evaluate(model,test_dataset,transform,bpath):
         image_sRGB = initialSample['image']
         
         A  = y_pred.reshape((19,2))
-        A = np.stack((rgb[:,0],rgb[:,1],1-rgb[:,0]-rgb[:,1]),axis=1)
+        A = np.stack((A[:,0],A[:,1],1-A[:,0]-A[:,1]),axis=1)
         
         B = load_macbetch_colorspace_coord('./MacbethColorSpace/ciexyz_std.txt')
-        B = xyz_std[:19]
+        B = B[:19]
         
         image_sRGB_corrected = homographyCorrection(image_sRGB,A,B)
         
@@ -45,9 +45,12 @@ def evaluate(model,test_dataset,transform,bpath):
         h,w,c = image_GT.shape
         image_sRGB_corrected_lab = rgb2lab(image_sRGB_corrected)
         image_GT_lab = rgb2lab(image_GT)
-    
-        labDiff = deltaE(image_GT_lab)
-        deltaE_errs.append(labDiff)
+
+        deltaE_errs.append(deltaE(image_GT_lab,image_sRGB_corrected_lab))
+        if i == 10:
+          break 
+        
+    return deltatRG_errs,deltaE_errs
         
         
         
