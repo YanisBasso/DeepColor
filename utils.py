@@ -181,6 +181,25 @@ def deltaE(I,J):
     dE = np.mean(dE)
     return dE 
 
+##################################
+# loading function
+##################################
+
+def load_macbetch_colorspace_coord(path):
+    """Load xyz stand value from MacBeth color checker 
+    """
+    colorMatrix =  np.zeros((24,3))
+    
+    with open(path) as fp:
+        lines = fp.readlines()
+        for i,line in enumerate(lines):
+            a,b,c = line.split()
+            colorMatrix[i] = np.array([[np.float32(a),np.float32(b),np.float32(c)]])
+    colorMatrix = colorMatrix.reshape((6,4,3))
+    colorMatrix = colorMatrix.swapaxes(0,1)
+    colorMatrix = colorMatrix.reshape((24,3))
+    return colorMatrix
+
     
     
 
