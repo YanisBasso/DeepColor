@@ -142,14 +142,14 @@ def homographyCorrection(image,A,B):
     h,w,_ = image.shape
     image = image.ravel()
     image = vsrgb2linear(image)
-    linRgbFlat = img_RGB.reshape((h*w,3))
+    image = image.reshape((h*w,3))
     
     _,D,H = als_rg(A,B)
     
-    xyzFlat = np.dot(linRgbFlat,H1)
+    xyzFlat = np.dot(image,H)
     
     rgb_corrected = xyz2rgb(xyzFlat)
-    rgb_corrected = vlinear_to_srgb(rgb_corrected.flatten())
+    rgb_corrected = vlinear2srgb(rgb_corrected.flatten())
     rgb_corrected = np.reshape(rgb_corrected,(h,w,3))
     
     return rgb_corrected
