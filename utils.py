@@ -53,27 +53,7 @@ def linear2srgb(image):
     
     return image
 
-def showImgFromTensor(tensor):
-    """
-    Show images from a batch 
-    :tensor: Pytorch tensor whose shape (N,C,H,W) with N number of images
-    """
-    ntensor = tensor.numpy()
-    imageCount = ntensor.shape[0]
-    fig = plt.figure(figsize = (20,10))
-    fig.suptitle('Examples of Pre-processed Images',fontsize=20)
-    columns = 4
-    if imageCount > 4 : 
-        rows = imageCount//columns + 1
-    else :
-        rows = 1
-    for i in range(imageCount):
-        img = tensor.numpy()[i].transpose((1, 2, 0))
-        i+=1
-        fig.add_subplot(rows, columns, i)
-        plt.imshow(img)
-        plt.axis('off')
-    plt.show()
+
     
 ##################################
 # Color space transformation
@@ -200,7 +180,73 @@ def load_macbetch_colorspace_coord(path):
     colorMatrix = colorMatrix.reshape((24,3))
     return colorMatrix
 
-    
+
+##################################
+# Visualisation tools 
+##################################
+
+def showImgFromTensor(tensor):
+    """
+    Show images from a batch 
+    :tensor: Pytorch tensor whose shape (N,C,H,W) with N number of images
+    """
+    ntensor = tensor.numpy()
+    imageCount = ntensor.shape[0]
+    fig = plt.figure(figsize = (20,10))
+    fig.suptitle('Examples of Pre-processed Images',fontsize=20)
+    columns = 4
+    if imageCount > 4 : 
+        rows = imageCount//columns + 1
+    else :
+        rows = 1
+    for i in range(imageCount):
+        img = tensor.numpy()[i].transpose((1, 2, 0))
+        i+=1
+        fig.add_subplot(rows, columns, i)
+        plt.imshow(img)
+        plt.axis('off')
+    plt.show()
+
+def visualizePrediction(model,dataloader):
+
+  device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+  model.eval()
+
+  sample  =  next(iter(dataloader))
+  inputs = sample['image'].to(device)
+  targets = sample['target'].data
+  outputs = model(inputs)
+
+  if device == torch.device("cuda:0"):
+    targets = targets.cpu()
+    outputs = outputs.cpu().detach()
+    inputs = inputs.cpu()
+
+  targets.numpy()
+  outputs.numpy()
+
+  for i in range(4):
+    image_plot = reverse_transform(inputs[i].cpu())
+    y_pred = outputs[i]
+    y_true = targets[i]
+    fig, (ax1,ax2) = plt.subplots(nrows=1,ncols=2,figsize=(10,4))
+    ax1.imshow(image_plot)
+    ax1.axis('off')
+    visuPredGap_rgDomain(y_pred,y_true,ax2)
+
+def gentab(err,title):
+    n = len(title)
+    if type(err) == np.ndarray:
+        err = err.tolist()
+    err_mean = np.mean(err)
+    err_median = np.quantile(err,0.5)
+    err_qu95 = np.quantile(err,0.95)
+    err_max = np.max(err)
+    print('\n')
+    print('_'*(45+n))
+    print('   {}       Mean   Median    95pct      max'.format(' '*n))
+    print('{4}   :  {0:8.2f} {1:8.2f} {2:8.2f} {3:8.2f}'.format(err_mean,err_median,err_qu95,err_max,title))
+    print('_'*(45+n))
     
 
     

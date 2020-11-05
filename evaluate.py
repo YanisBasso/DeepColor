@@ -47,8 +47,11 @@ def evaluate(model,test_dataset,transform):
         image_GT_lab = rgb2lab(image_GT)
 
         deltaE_errs.append(deltaE(image_GT_lab,image_sRGB_corrected_lab))
-        if i == 10:
-          break 
+        
+    gentab(errs,'deltaElab')
+    gentab(rgDists,'rg Distance')
+        
+        
         
     return deltatRG_errs,deltaE_errs
         
