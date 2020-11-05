@@ -185,6 +185,26 @@ def load_macbetch_colorspace_coord(path):
 # Visualisation tools 
 ##################################
 
+def visuPredGap_rgDomain(y_pred,y_truth,ax=None,**kwargs):
+  '''
+  Plot prediction and target value on rg domain
+  '''
+  ax = ax or plt.gca()
+  scaleRange = np.linspace(0,1,5)
+  for j in range(19):
+      ax.scatter(y_pred[2*j],y_pred[2*j+1],c=MACBETH_COLOR_HEX[j])
+      ax.scatter(y_truth[2*j],y_truth[2*j+1],c=MACBETH_COLOR_HEX[j],marker='x',s = 100)
+
+  ax.axis(xmin=0,xmax=1)
+  ax.set_xlabel('r channel',fontsize=20)
+  ax.set_ylabel('g channel',fontsize=20)
+  ax.set_xticks(scaleRange)
+  ax.set_yticks(scaleRange)
+  ax.tick_params(axis="x", labelsize=16)
+  ax.tick_params(axis="y", labelsize=16)
+  ax.set_facecolor('#000000')
+  return ax
+
 def showImgFromTensor(tensor):
     """
     Show images from a batch 
@@ -234,6 +254,48 @@ def visualizePrediction(model,dataloader):
     ax1.axis('off')
     visuPredGap_rgDomain(y_pred,y_true,ax2)
 
+def showResult(model,dataset,transform,ind):
+    
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    model.eval()
+
+    sample = myDatasets['Test'][ind]
+    initialSample = sample
+    sample = transform(sample)
+    inputs = sample['image'].to(device)
+    inputs = inputs.unsqueeze(0)
+    y_true = sample['target'].data.cpu().numpy()
+    outputs = model(inputs)
+    outputs = outputs.data.cpu().numpy()
+    y_pred = outputs[0]
+    
+    image_sRGB = initialSample['image']
+    
+    A  = y_pred.reshape((19,2))
+    A = np.stack((A[:,0],A[:,1],1-A[:,0]-A[:,1]),axis=1)
+    
+    B = load_macbetch_colorspace_coord('./MacbethColorSpace/ciexyz_std.txt')
+    B = B[:19]
+    
+    image_sRGB_corrected = homographyCorrection(image_sRGB,A,B)
+    
+    name = test_dataset.getName(i) + '.png'
+    image_name = os.path.join('im_corrected',name)
+    image_GT = io.imread(image_name)/255.0
+
+    h,w,c = image_GT.shape
+    image_sRGB_corrected_lab = rgb2lab(image_sRGB_corrected)
+    image_GT_lab = rgb2lab(image_GT)
+
+    fig, (ax1,ax2,ax3,ax4) = plt.subplots(nrows=1,ncols=4,figsize=(25,5))
+    ax1.imshow(image_sRGB)
+    ax1.axis('off')
+    ax2.imshow(image_sRGB_corrected)
+    x2.axis('off')
+    ax3.imshow(image_GT)
+    ax3.axis('off')
+    visuPredGap_rgDomain(y_pred,target,ax4)
+  
 def gentab(err,title):
     n = len(title)
     if type(err) == np.ndarray:
