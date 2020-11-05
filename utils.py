@@ -5,6 +5,7 @@ Created on Mon Nov  2 14:14:41 2020
 
 @author: yanis
 """
+import os 
 import numpy as np 
 import matplotlib.pyplot as plt 
 from numpy.linalg import inv 
@@ -254,12 +255,12 @@ def visualizePrediction(model,dataloader):
     ax1.axis('off')
     visuPredGap_rgDomain(y_pred,y_true,ax2)
 
-def showResult(model,dataset,transform,ind):
+def showResult(model,dataset,transform,ind,**kwargs):
     
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     model.eval()
 
-    sample = myDatasets['Test'][ind]
+    sample = dataset[ind]
     initialSample = sample
     sample = transform(sample)
     inputs = sample['image'].to(device)
@@ -279,22 +280,22 @@ def showResult(model,dataset,transform,ind):
     
     image_sRGB_corrected = homographyCorrection(image_sRGB,A,B)
     
-    name = test_dataset.getName(i) + '.png'
+    name = dataset.getName(ind) + '.png'
     image_name = os.path.join('im_corrected',name)
     image_GT = io.imread(image_name)/255.0
 
-    h,w,c = image_GT.shape
-    image_sRGB_corrected_lab = rgb2lab(image_sRGB_corrected)
-    image_GT_lab = rgb2lab(image_GT)
-
-    fig, (ax1,ax2,ax3,ax4) = plt.subplots(nrows=1,ncols=4,figsize=(25,5))
+    fig, (ax1,ax2,ax3,ax4) = plt.subplots(nrows=1,ncols=4,figsize=(25,5),**kwargs)
     ax1.imshow(image_sRGB)
+    ax1.set_title('Input Image',**kwargs)
     ax1.axis('off')
     ax2.imshow(image_sRGB_corrected)
-    x2.axis('off')
+    ax2.set_title('Our Corrected Image',**kwargs)
+    ax2.axis('off')
     ax3.imshow(image_GT)
+    ax3.set_title('CC Corrected Image',**kwargs)
     ax3.axis('off')
-    visuPredGap_rgDomain(y_pred,target,ax4)
+    visuPredGap_rgDomain(y_pred,y_true,ax4)
+    ax4.set_title('RG Histogramm',**kwargs)
   
 def gentab(err,title):
     n = len(title)
