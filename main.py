@@ -40,11 +40,15 @@ batchsize = 8
 #summary(model_ft, input_size=(3, 512, 512))
 
 
-# Create the dataloader
-dataloaders = get_dataloader(img_path,target_path, batch_size=batchsize,fraction = 0.002)
-iterator = iter(dataloaders['Train'])
-tensor = next(iterator)['image']
-showImgFromTensor(tensor)
+gd = datasets.GehlerDataset(img_path,target_path)
+image = gd[0]['image']
+plt.figure()
+plt.imshow(image)
+
+plt.figure()
+flipped_image = np.flip(image,1)
+plt.imshow(flipped_image)
+
 
 
 

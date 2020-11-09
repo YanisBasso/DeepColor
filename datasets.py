@@ -133,6 +133,55 @@ class GehlerDataset(Dataset):
         nameWithExtenstion = Path(self.ids[idx])
         return nameWithExtenstion.stem
     
+##################################
+# Data augmentation 
+##################################
+
+class RandomFlip(object):
+    """
+    Data augmentation - Random horizontal and vertical flip
+    """   
+    def __init__(self,p_vert=0.5,p_hor=0.5):
+        self.p_vert = p_vert
+        self.p_hor = p_hor
+        
+    def __call__(self,sample):
+        assert type(sample) == dict 
+        image = sample['image']
+        #Horizontal flip
+        if random.random() < self.p_hor  :
+            image = np.flip(image,1)
+        #Vertical flip
+        if random.random() < self.p_vert  :
+            image = np.flip(image,0)
+        sample['image'] = image
+        return sample
+
+class RandomRotate(object):
+    """
+    Data augmentation - Random Rotation 
+    """
+    def __init__(self,angle_max,p):
+        self.angle_max = angle_max
+        self.p = p
+        
+    def __call__(self,sample):
+        assert type(sample) == dict
+        image = sample['image']
+        
+        if random.random() < self.p:
+            angle = (random.random()*2 - 1)*self.angle_max
+            image = transform.rotate(image,angle)
+        sample['image'] = image
+        return sample 
+        
+        
+
+##################################
+# Data preprocessing 
+##################################
+        
+    
 class Srgb2Linear(object):
     """
     Data transfromation - apply gamma transformation 
