@@ -9,7 +9,6 @@ from utils import *
 
 def evaluate(model,test_dataset,transform):
     
-    since = time.time()
     # Use gpu if available
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     model.to(device)
