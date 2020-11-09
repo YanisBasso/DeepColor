@@ -27,6 +27,49 @@ import cv2
 import warnings
 warnings.filterwarnings("ignore")
 
+class ChengDataset(Dataset):
+    """Cheng dataset with rg colorchecker patch values as target"""
+    
+    def __init__(self,img_path,target_path,transform=None,seed=None,fraction=None,subset=None):
+        
+        self.img_path = img_path
+        self.target_path = target_path
+        self.targets = pd.read_csv(target_path) 
+        self.transform = transform
+        self.camera_sensors = next(os.walk(img_path))[1]
+        
+        first_dir = os.path.join(self.img_path,self.camera_sensors[0])
+        self.ids = next(os.walk(first_dir))[2]
+        
+        print(ids)
+        
+        if fraction :
+            assert(subset in ['Train', 'Test'])
+            self.fraction = fraction
+            if seed:
+                np.random.seed(seed)
+                indices = np.arange(len(self.ids))
+                np.random.shuffle(indices)
+                self.ids = self.ids[indices]
+            if subset == 'Test':
+                self.ids = self.ids[:int(
+                    np.ceil(len(self.ids)*(1-self.fraction)))]
+            else:
+                self.ids = self.ids[int(
+                    np.ceil(len(self.ids)*(1-self.fraction))):]
+    def __len__(self):
+        return len(self.ids)
+    
+    def __getitem__(self, idx):
+        raise NotImplementedError
+        
+    def _get_image_ids(self):
+        
+        first_dir = os.path.join(self.img_path,self.camera_sensors[0])
+        ids = next(os.walk(first_dir))[2]
+        ids = [index.split('_')[1] for index in ids]
+        return ids
+        
 class GehlerDataset(Dataset):
     """Gheler dataset with rg colorchecker patch values as target"""
 
