@@ -151,10 +151,10 @@ class RandomFlip(object):
         image = sample['image']
         #Horizontal flip
         if random.random() < self.p_hor  :
-            image = np.flip(image,1)
+            image = np.flip(image,1).copy()
         #Vertical flip
         if random.random() < self.p_vert  :
-            image = np.flip(image,0)
+            image = np.flip(image,0).copy()
         sample['image'] = image
         return sample
 
@@ -370,23 +370,23 @@ def get_dataloader(img_path,target_path, fraction=0.7, batch_size=4):
     """
         Create training and testing dataloaders from a single folder.
     """
-    data_transforms = {
+    data_transforms =     data_transforms = {
         'Train': transforms.Compose([ 
-           #Srgb2Linear(),
-           #RemoveShading(),
            Rescale(225),
            RandomCrop(224),
-           ToTensor(),
-           Normalize(mean=[0.485, 0.456, 0.406],
-                     std=[0.229, 0.224, 0.225])]),
+           RandomFlip(),
+           RandomRotate(10,0.5)
+           #ToTensor(),
+           #Normalize(mean=[0.485, 0.456, 0.406],
+                     #std=[0.229, 0.224, 0.225])
+                     ]),
         'Test': transforms.Compose([
-           #Srgb2Linear(),
-           #RemoveShading(),
            Rescale(230),
-           RandomCrop(224),
-           ToTensor(),
-           Normalize(mean=[0.485, 0.456, 0.406],
-                     std=[0.229, 0.224, 0.225])])
+           RandomCrop(224)
+           #ToTensor(),
+           #Normalize(mean=[0.485, 0.456, 0.406],
+                     #std=[0.229, 0.224, 0.225])
+                     ])
     }
 
     image_datasets = {x: GehlerDataset(img_path = img_path,

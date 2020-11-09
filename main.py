@@ -39,17 +39,24 @@ batchsize = 8
 
 #summary(model_ft, input_size=(3, 512, 512))
 
+dataloaders = datasets.get_dataloader(img_path,target_path, fraction=0.7, batch_size=4)
 
-gd = datasets.GehlerDataset(img_path,target_path)
-image = gd[0]['image']
-plt.figure()
-plt.imshow(image)
+gd = datasets.GehlerDataset(img_path = img_path,
+                                target_path = target_path,
+                                transform = None,
+                                seed = 12)
 
-plt.figure()
-flipped_image = np.flip(image,1)
-plt.imshow(flipped_image)
+from torchvision import transforms
 
+data_transform = transforms.Compose([
+        datasets.RandomFlip(),
+        datasets.RandomRotate(10,0.5),
+        datasets.ToTensor()
+        ])
 
+for i in range(10):
+    min_value = data_transform(gd[i])['image'].max()
+    print(f'min_value :{min_value}')
 
 
 
