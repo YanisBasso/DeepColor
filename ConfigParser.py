@@ -6,9 +6,11 @@ Created on Tue Nov 10 15:11:02 2020
 @author: yanis
 """
 
+import os 
+import json 
+
 from pathlib import Path
 from datetime import datetime 
-import json 
 from collections import OrderedDict
 
 class ConfigParser:
@@ -46,6 +48,9 @@ class ConfigParser:
         """
         Initialize this class from some cli arguments. Used in train, test.
         """
+        if not isinstance(args, tuple):
+            args = args.parse_args()
+            
         if args.device is not None:
             os.environ["CUDA_VISIBLE_DEVICES"] = args.device
             
@@ -62,10 +67,10 @@ class ConfigParser:
         with cfg_fname.open('rt') as handle:
             config = json.load(handle, object_hook=OrderedDict)
             
-        return cls(config, resume, modification)
+        return cls(config, resume)
     
     def _setup_save_dir(self):
-        self.save_dir.mkdir(parents=True,exist_ok=exist_ok)
+        self.save_dir.mkdir(parents=True,exist_ok=True)
         #Add config file to the directory 
         fname = self.save_dir / 'config.json'
         with fname.open('wt') as handle:
