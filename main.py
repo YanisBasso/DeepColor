@@ -34,8 +34,8 @@ target_path = '/Users/yanis//GehlerDataset/colorMean.csv'
 epochs = 2
 batchsize = 8
 
-#model_ft,input_size = initialize_model(model_name = "resnet101", num_classes = 38, feature_extract = True, use_pretrained=True)
-#model_ft.train()
+model_ft,input_size = initialize_model(model_name = "resnet101", num_classes = 38, feature_extract = True, use_pretrained=True)
+model_ft.train()
 
 #summary(model_ft, input_size=(3, 512, 512))
 
