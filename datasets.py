@@ -375,17 +375,17 @@ def get_dataloader(img_path,target_path, fraction=0.7, batch_size=4):
            Rescale(225),
            RandomCrop(224),
            RandomFlip(),
-           RandomRotate(10,0.5)
-           #ToTensor(),
-           #Normalize(mean=[0.485, 0.456, 0.406],
-                     #std=[0.229, 0.224, 0.225])
+           RandomRotate(10,0.5),
+           ToTensor(),
+           Normalize(mean=[0.485, 0.456, 0.406],
+                     std=[0.229, 0.224, 0.225])
                      ]),
         'Test': transforms.Compose([
            Rescale(230),
-           RandomCrop(224)
-           #ToTensor(),
-           #Normalize(mean=[0.485, 0.456, 0.406],
-                     #std=[0.229, 0.224, 0.225])
+           RandomCrop(224),
+           ToTensor(),
+           Normalize(mean=[0.485, 0.456, 0.406],
+                     std=[0.229, 0.224, 0.225])
                      ])
     }
 

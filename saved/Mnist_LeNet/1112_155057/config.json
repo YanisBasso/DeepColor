@@ -2,11 +2,11 @@
     "name": "Mnist_LeNet",
     "n_gpu": 1,
     "arch": {
-        "type": "initialize_model",
+        "type": "FinetuneResNet",
         "args": {
-            "model_name": "resnet101",
+            "backbone_version": "resnet101",
             "num_classes": 38,
-            "feature_extract": true,
+            "feature_extracting": true,
             "use_pretrained": true
         }
     },

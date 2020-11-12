@@ -13,7 +13,7 @@ class FinetuneResNet(nn.Module):
     
     def __init__(self,backbone_version,num_classes,feature_extracting,use_pretrained = True):
         super(FinetuneResNet, self).__init__()
-        assert resnet_version in ['resnet18','resnet50','resnet101']
+        assert backbone_version in ['resnet18','resnet50','resnet101']
         self.backbone_version = backbone_version 
         #Download pre-trained module
         self.model = getattr(models,self.backbone_version)(use_pretrained)
@@ -131,10 +131,7 @@ def initialize_model(model_name, num_classes, feature_extract, use_pretrained=Tr
 
     return model_ft, input_size
 '''
-if __name__ == '__main__':
-    
-    model = FinetuneResNet('resnet18',num_classes=28,feature_extracting=True)
-    print(model.state_dict())
+
     
     
     
