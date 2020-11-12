@@ -9,6 +9,46 @@ Created on Mon Nov  2 14:51:56 2020
 from torch import nn
 from torchvision import models
 
+class FinetuneResNet(nn.Module):
+    
+    def __init__(self,backbone_version,num_classes,feature_extracting,use_pretrained = True):
+        super(FinetuneResNet, self).__init__()
+        assert resnet_version in ['resnet18','resnet50','resnet101']
+        self.backbone_version = backbone_version 
+        #Download pre-trained module
+        self.model = getattr(models,self.backbone_version)(use_pretrained)
+        #Freeze the feature extracter part 
+        self._set_parameter_requires_grad(feature_extracting)
+        #Create regression layers 
+        self.num_classes = num_classes
+        #Add regression part 
+        num_ftrs = self.model.fc.in_features
+        self.model.fc = nn.Sequential(
+                nn.Linear(num_ftrs,512),
+                nn.ReLU(inplace=True),
+                nn.LayerNorm(512),
+                nn.Linear(512,256),
+                nn.ReLU(inplace=True),
+                nn.LayerNorm(256),
+                nn.Linear(256,self.num_classes)
+             )
+        
+    def _set_parameter_requires_grad(self, feature_extracting):
+            if feature_extracting:
+                for param in self.model.parameters():
+                    param.requires_grad = False
+        
+        
+    def forward(self,x):
+        x = self.model(x)
+    
+    def __str__(self):
+        return str(self.model)
+        
+        
+        
+        
+'''
 def set_parameter_requires_grad(model, feature_extracting):
     if feature_extracting:
         for param in model.parameters():
@@ -90,3 +130,13 @@ def initialize_model(model_name, num_classes, feature_extract, use_pretrained=Tr
           exit()
 
     return model_ft, input_size
+'''
+if __name__ == '__main__':
+    
+    model = FinetuneResNet('resnet18',num_classes=28,feature_extracting=True)
+    print(model.state_dict())
+    
+    
+    
+    
+    

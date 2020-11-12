@@ -29,11 +29,9 @@ if __name__ == '__main__':
     config = ConfigParser.from_args(args)
     
     # setup data_loader instances
+    model = config.init_obj('arch', models)
+    print(model)
     
-    # build model architecture
-    model_ft,input_size = config.init_ftn('arch',models)
-    print(model_ft)
-
     # get function handles of loss and metrics
     
     # build optimizer
