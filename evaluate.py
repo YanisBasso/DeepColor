@@ -8,7 +8,7 @@ Created on Wed Nov  4 08:26:13 2020
 from utils import *
 
 def evaluate(model,test_dataset,transform):
-    
+        
     # Use gpu if available
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     model.to(device)

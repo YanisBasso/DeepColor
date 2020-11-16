@@ -7,13 +7,51 @@ Created on Mon Nov  2 15:08:35 2020
 """
 
 from ConfigParser import ConfigParser
+from train import Trainer
 import argparse
 import torch
 import models
+import datasets
 
 # Ignore warnings
 import warnings
 warnings.filterwarnings("ignore")
+
+def main(config):
+    
+    #create a config parser 
+    config = ConfigParser.from_args(args)
+    
+    # setup data_loader instances
+    dataloaders = datasets.get_dataloader(img_path = "/Users/yanis/GehlerDataset/im",
+                                          target_path = "/Users/yanis/GehlerDataset/colorMean.csv",
+                                          fraction=0.7,
+                                          batch_size=4)
+    
+    #setup model 
+    model = config.init_obj('arch', models)
+    #print(model)
+    
+    # get function handles of loss and metrics
+    criterion = torch.nn.MSELoss(reduction='mean')
+    metrics = {}
+    
+    # build optimizer
+    optimizer = config.init_obj('optimizer', torch.optim, model.parameters())
+    #print(optimizer)
+    
+    trainer = Trainer(model = model,
+                      dataloaders = dataloaders,
+                      optimizer = optimizer,
+                      criterion = criterion,
+                      metrics = metrics,
+                      config = config)
+    
+    trainer.train()
+    
+    print(trainer.model)
+    
+    
 
 if __name__ == '__main__':
     
@@ -28,17 +66,7 @@ if __name__ == '__main__':
     #create a config parser 
     config = ConfigParser.from_args(args)
     
-    # setup data_loader instances
-    
-    # build model architecture
-    model_ft,input_size = config.init_ftn('arch',models)
-    print(model_ft)
-
-    # get function handles of loss and metrics
-    
-    # build optimizer
-    optimizer = config.init_obj('optimizer', torch.optim, model_ft.parameters())
-    print(optimizer)
+    main(config)
 
 
 

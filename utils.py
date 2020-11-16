@@ -10,6 +10,7 @@ import numpy as np
 import matplotlib.pyplot as plt 
 from numpy.linalg import inv 
 from skimage import io,color 
+from colorCheckerValues import MACBETH_COLOR,MACBETH_COLOR_HEX
 import torch 
 
 def px_srgb2linear(x):
@@ -254,9 +255,9 @@ def visualizePrediction(model,dataloader):
     targets = targets.cpu()
     outputs = outputs.cpu().detach()
     inputs = inputs.cpu()
-
-  targets.numpy()
-  outputs.numpy()
+  
+  targets.detach().numpy()
+  outputs.detach().numpy()
 
   for i in range(4):
     image_plot = reverse_transform(inputs[i].cpu())
