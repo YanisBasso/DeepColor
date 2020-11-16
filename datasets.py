@@ -401,6 +401,24 @@ def get_dataloader(img_path,target_path, fraction=0.7, batch_size=4):
                                  shuffle=True, num_workers=8)
                    for x in ['Train', 'Test']}
     return dataloaders
+
+def get_eval_dataset(img_path,target_path, fraction=0.7) :
+    
+    data_transform = transforms.Compose([
+                                     Rescale(230),
+                                     RandomCrop(224),
+                                     ToTensor(),
+                                     Normalize(mean=(0.485, 0.456, 0.406),
+                                     std=(0.229, 0.224, 0.225))])
+    
+    test_dataset = GehlerDataset(img_path = img_path,
+                   target_path = target_path,
+                   transform = None,
+                   seed = 12,
+                   fraction = fraction,
+                   subset = 'Test')
+    
+    return data_transform,test_dataset
     
 
 
