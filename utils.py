@@ -254,7 +254,7 @@ def visualizePrediction(model,dataloader):
     targets = targets.cpu()
     outputs = outputs.cpu().detach()
     inputs = inputs.cpu()
-
+  
   targets.detach().numpy()
   outputs.detach().numpy()
 
