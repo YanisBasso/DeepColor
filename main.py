@@ -30,7 +30,7 @@ def main(config):
     
     #setup model 
     model = config.init_obj('arch', models)
-    print(model)
+    #print(model)
     
     # get function handles of loss and metrics
     criterion = torch.nn.MSELoss(reduction='mean')
@@ -38,17 +38,18 @@ def main(config):
     
     # build optimizer
     optimizer = config.init_obj('optimizer', torch.optim, model.parameters())
-    print(optimizer)
+    #print(optimizer)
     
     trainer = Trainer(model = model,
                       dataloaders = dataloaders,
                       optimizer = optimizer,
                       criterion = criterion,
                       metrics = metrics,
-                      num_epochs = 4,
                       config = config)
     
     trainer.train()
+    
+    print(trainer.model)
     
     
 

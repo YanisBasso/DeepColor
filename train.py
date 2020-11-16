@@ -9,6 +9,7 @@ Created on Mon Nov  2 14:54:05 2020
 import csv
 import copy
 import time
+from pathlib import Path
 from tqdm import tqdm
 import torch
 import numpy as np
@@ -17,15 +18,21 @@ import os
 
 class Trainer(object):
 
-  def __init__(self,model,dataloaders,optimizer,criterion,metrics,num_epochs,config):
-
+  def __init__(self,model,dataloaders,optimizer,criterion,metrics,config):
+    """
+    :model:
+    :dataloaders:
+    :optimizer:
+        
+    """
     self.config = config
     self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    print(f'device {self.device}')
     self.model = model.to(self.device)
     self.criterion = criterion 
     self.metrics = metrics
     self.optimizer = optimizer
-    self.num_epochs = num_epochs
+    self.num_epochs = config['trainer']['epochs']
     self.start_epoch = 1
     assert type(dataloaders) == dict
     self.dataloaders = dataloaders
@@ -33,15 +40,15 @@ class Trainer(object):
                       [f'Train_{m}' for m in metrics.keys()] + \
                       [f'Test_{m}' for m in metrics.keys()]
     #self.best_loss = 1e10
-    self.checkpoint_dir = config['checkpoint_dir']
-    self.save_period = config['save_period']
+    self.checkpoint_dir = Path(config['trainer']['save_dir'])
+    self.save_period = config['trainer']['save_period']
 
     with open(os.path.join(self.checkpoint_dir, 'log.csv'), 'w', newline='') as csvfile:
         writer = csv.DictWriter(csvfile, fieldnames=self.fieldnames)
         writer.writeheader()
 
-    if config['resume'] is not None:
-      self._resume_checkpoint(config['resume'])
+    if config.resume is not None:
+      self._resume_checkpoint(config.resume)
 
   def train(self):
 
@@ -58,18 +65,18 @@ class Trainer(object):
           self.model.train()
         else :
           self.model.eval()
-        print(self.optimizer.state_dict().keys())
         for sample in tqdm(iter(self.dataloaders[phase])):
+          
           inputs = sample['image'].to(self.device)
           targets = sample['target'].to(self.device)
           # zero the parameter gradients
           self.optimizer.zero_grad()
-
           with torch.set_grad_enabled(phase == 'Train'):
             outputs = self.model(inputs)
+            
             loss = self.criterion(outputs, targets)
-            y_pred = outputs.data.cpu().numpy().ravel()
-            y_true = targets.data.cpu().numpy().ravel()
+            y_pred = outputs.data.numpy().ravel()
+            y_true = targets.data.numpy().ravel()
             for name, metric in self.metrics.items():
               batchsummary[f'{phase}_{name}'].append(metric(y_true, y_pred))
 
