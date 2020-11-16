@@ -255,8 +255,8 @@ def visualizePrediction(model,dataloader):
     outputs = outputs.cpu().detach()
     inputs = inputs.cpu()
 
-  targets.numpy()
-  outputs.numpy()
+  targets.detach().numpy()
+  outputs.detach().numpy()
 
   for i in range(4):
     image_plot = reverse_transform(inputs[i].cpu())
