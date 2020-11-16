@@ -17,7 +17,10 @@ from functools import partial
 class ConfigParser:
     
     def __init__(self,config,resume = None):
-        
+        """
+        :config: Dict containing all the hyperparameters of the experiment 
+        :resume: str of resume path 
+        """
         self._config = config
         self.resume = resume 
         
@@ -72,6 +75,7 @@ class ConfigParser:
         if args.resume is not None:
             resume = Path(args.resume)
             cfg_fname = resume.parent / 'config.json'
+            print(cfg_fname)
         else:
             msg_no_cfg = "Configuration file need to be specified. Add '-c config.json', for example."
             assert args.config is not None, msg_no_cfg
@@ -85,6 +89,7 @@ class ConfigParser:
         return cls(config, resume)
     
     def _setup_save_dir(self):
+        """Prepare save directory"""
         self.save_dir.mkdir(parents=True,exist_ok=True)
         #Add config file to the directory 
         fname = self.save_dir / 'config.json'

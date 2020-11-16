@@ -41,6 +41,7 @@ class FinetuneResNet(nn.Module):
         
     def forward(self,x):
         x = self.model(x)
+        return x 
     
     def __str__(self):
         return str(self.model)
