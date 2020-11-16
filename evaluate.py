@@ -48,8 +48,8 @@ def evaluate(model,test_dataset,transform):
 
         deltaE_errs.append(deltaE(image_GT_lab,image_sRGB_corrected_lab))
         
-    gentab(errs,'deltaElab')
-    gentab(rgDists,'rg Distance')
+    gentab(deltaE_errs,'deltaElab')
+    gentab(deltatRG_errs,'rg Distance')
         
         
         
