@@ -75,8 +75,13 @@ class Trainer(object):
             outputs = self.model(inputs)
             
             loss = self.criterion(outputs, targets)
-            y_pred = outputs.data.numpy().ravel()
-            y_true = targets.data.numpy().ravel()
+            
+            if self.device == torch.device("cuda:0"):
+                y_pred = outputs.data.cpu().numpy().ravel()
+                y_true = targets.data.cpu().numpy().ravel()
+            else :
+                y_pred = outputs.data.numpy().ravel()
+                y_true = targets.data.numpy().ravel()
             for name, metric in self.metrics.items():
               batchsummary[f'{phase}_{name}'].append(metric(y_true, y_pred))
 
