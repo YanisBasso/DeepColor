@@ -7,6 +7,7 @@ Created on Wed Nov  4 08:26:13 2020
 """
 from utils import *
 from tqdm import tqdm 
+import torch 
 
 def evaluate(model,test_dataset,transform):
         
@@ -50,8 +51,6 @@ def evaluate(model,test_dataset,transform):
         
     gentab(deltaE_errs,'deltaElab')
     gentab(deltatRG_errs,'rg Distance')
-        
-        
         
     return deltatRG_errs,deltaE_errs
         
