@@ -20,7 +20,7 @@ from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms, utils
 import torchvision.transforms.functional as F
 from tqdm import tqdm
-from utils import vsrgb2linear
+from utils import vsrgb2linear, vlinear2srgb
 import cv2 
 import random 
 
@@ -70,10 +70,57 @@ class ChengDataset(Dataset):
         ids = next(os.walk(first_dir))[2]
         ids = [index.split('_')[1] for index in ids]
         return ids
+
+class GehlerRAWDataset(Dataset):
+    """Gheler dataset in RAW format with rg values as target"""
+    def __init__(self,img_path,transform=None,remove_cc = None):
+        self.img_path = Path(img_path)
+        self.transform = transform
+        self.ids = next(os.walk(img_path))[2]
+        self.ids = self.ids[::2]
+        self.remove_cc = remove_cc
+        if '.DS_Store' in self.ids :
+            self.ids.remove('.DS_Store')
+            self.ids = np.array(self.ids)
+            
+    def __len__(self):
+        return len(self.ids)
+    
+    def __getitem__(self,idx):
+        
+        if torch.is_tensor(idx):
+            idx = idx.tolist()
+        #get img 
+        name  = self.ids[idx]
+        img_path = str(self.img_path / Path(name))
+        raw = np.array(cv2.imread(img_path, -1), dtype='float32')
+        #Set black_point
+        if name.split('_')[0] == 'IMG':
+            black_point = 129
+        else : 
+            black_point = 1
+            
+        raw = np.maximum(raw - black_point, [0,0,0])
+        img = (np.clip(raw / raw.max(), 0, 1) * 1.0)
+        if self.transform:
+            img = self.transform(img)
+        return img
+    
+    def getName(self,idx) :
+        """
+        get the name of a given image 
+        
+        :idx: int - index of image in the dataset 
+        :return: string - name of the image without extension
+        """
+        nameWithExtenstion = Path(self.ids[idx])
+        return nameWithExtenstion.stem
+
+            
         
 class GehlerDataset(Dataset):
     """Gheler dataset with rg colorchecker patch values as target"""
-
+    
     def __init__(self, img_path, target_path, transform=None,seed=None, fraction=None, subset=None):
 
         self.img_path = img_path
@@ -185,7 +232,7 @@ class RandomRotate(object):
     
 class Srgb2Linear(object):
     """
-    Data transfromation - apply gamma transformation 
+    Data transfromation - apply inverse gamma transformation 
     """
     
     def __call__(self, sample):
@@ -206,7 +253,32 @@ class Srgb2Linear(object):
         if type(sample) == dict:
             return {'image': image, 'target': target}
         elif type(sample) == np.ndarray:
-            return image    
+            return image   
+
+class linear2srgb(object):
+    """
+    Data transfromation - apply gamma transformation 
+    """
+    
+    def __call__(self, sample):
+        """
+        :sample: numpy array or dict for training mode
+        :return: numpy array or dict according to the input
+        """
+        if type(sample) == dict:
+            image,target = sample['image'], sample['target']
+        elif type(sample) == np.ndarray:
+            image = sample
+            
+        shape = image.shape
+        image = image.flatten()
+        image = vlinear2srgb(image)
+        image = image.reshape(shape)
+        
+        if type(sample) == dict:
+            return {'image': image, 'target': target}
+        elif type(sample) == np.ndarray:
+            return image   
 
 class RemoveShading(object):
     """
@@ -419,8 +491,21 @@ def get_eval_dataset(img_path,target_path, fraction=0.7) :
                    subset = 'Test')
     
     return data_transform,test_dataset
+
+
+if __name__ == "__main__":
     
 
+    dataset = GehlerRAWDataset("/Volumes/MCUSB/png")#,transform = linear2srgb())
+    img = dataset[3]
+    print(dataset.ids)
+    print(f'img shape : {img.shape}')
+    print(f'img max : {img.max()}')
+    print(f'img min : {img.min()}')
+    print(f'img type : {img.dtype}')
 
+    
+    plt.imshow(img)
+    plt.show()
     
     
