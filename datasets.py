@@ -17,9 +17,8 @@ import matplotlib.pyplot as plt
 
 import torch
 from torch.utils.data import Dataset, DataLoader
-from torchvision import transforms, utils
+from torchvision import transforms
 import torchvision.transforms.functional as F
-from tqdm import tqdm
 from utils import vsrgb2linear, vlinear2srgb
 import cv2 
 import random 
@@ -42,7 +41,6 @@ class ChengDataset(Dataset):
         first_dir = os.path.join(self.img_path,self.camera_sensors[0])
         self.ids = next(os.walk(first_dir))[2]
         
-        print(ids)
         
         if fraction :
             assert(subset in ['Train', 'Test'])
@@ -73,10 +71,13 @@ class ChengDataset(Dataset):
 
 class GehlerRAWDataset(Dataset):
     """Gheler dataset in RAW format with rg values as target"""
-    def __init__(self,img_path,transform=None,remove_cc = None):
-        self.img_path = Path(img_path)
+    def __init__(self,dir_path,transform=None,remove_cc = None):
+        self.dir_path = Path(dir_path)
+        self.img_path = self.dir_path / 'image'
+        self.coord_path = self.dir_path / 'coord'
         self.transform = transform
-        self.ids = next(os.walk(img_path))[2]
+        
+        self.ids = next(os.walk(self.img_path))[2]
         self.ids = self.ids[::2]
         self.remove_cc = remove_cc
         if '.DS_Store' in self.ids :
@@ -91,20 +92,49 @@ class GehlerRAWDataset(Dataset):
         if torch.is_tensor(idx):
             idx = idx.tolist()
         #get img 
-        name  = self.ids[idx]
-        img_path = str(self.img_path / Path(name))
+        name  = Path(self.ids[idx])
+        img_path = str(self.img_path / name)
         raw = np.array(cv2.imread(img_path, -1), dtype='float32')
+        raw = cv2.cvtColor(raw, cv2.COLOR_BGR2RGB)
         #Set black_point
-        if name.split('_')[0] == 'IMG':
+        if name.stem.split('_')[0] == 'IMG':
             black_point = 129
         else : 
             black_point = 1
             
         raw = np.maximum(raw - black_point, [0,0,0])
         img = (np.clip(raw / raw.max(), 0, 1) * 1.0)
+        
+        #Hide color checker with black pixels 
+        if self.remove_cc:
+            mire_coord = self._get_mire_coordinates(name.stem)
+            mire_coord[:,0] = mire_coord[:,0]*img.shape[1]
+            mire_coord[:,1] = mire_coord[:,1]*img.shape[0]
+            pts = mire_coord.astype(np.int32)
+            mask = np.zeros(img.shape[:2], dtype=img.dtype)
+            mask = cv2.fillPoly(mask,[pts],(255,255))
+            img[mask == 255] = 0
+            
         if self.transform:
             img = self.transform(img)
         return img
+    
+    def _get_mire_coordinates(self,name):
+        path = self.coord_path / '{}_macbeth.txt'.format(name)
+        with open(path) as fp :
+            lines = fp.readlines()
+            x,y = lines[0].split(' ')
+            r_x = np.float32(x)
+            r_y = np.float32(y)
+            mire_coord  = np.zeros((4,2))
+            for i,line in enumerate(lines[1:5]):
+                x,y = line.split(' ')
+                mire_coord[i%4,0] = np.float32(x)/r_x
+                mire_coord[i%4,1] = np.float32(y)/r_y
+        mire = mire_coord.copy()
+        mire_coord[3],mire_coord[2] = mire[2],mire[3]
+        return mire_coord 
+            
     
     def getName(self,idx) :
         """
@@ -495,17 +525,11 @@ def get_eval_dataset(img_path,target_path, fraction=0.7) :
 
 if __name__ == "__main__":
     
-
-    dataset = GehlerRAWDataset("/Volumes/MCUSB/png")#,transform = linear2srgb())
-    img = dataset[3]
-    print(dataset.ids)
+    dataset = GehlerRAWDataset("/Volumes/MCUSB/gehler",remove_cc = False,transform = linear2srgb())
+    img = dataset[49]
     print(f'img shape : {img.shape}')
     print(f'img max : {img.max()}')
     print(f'img min : {img.min()}')
     print(f'img type : {img.dtype}')
-
-    
     plt.imshow(img)
     plt.show()
-    
-    
