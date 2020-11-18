@@ -150,12 +150,13 @@ class GehlerRAWDataset(Dataset):
 class GehlerDataset(Dataset):
     """Gheler dataset with rg colorchecker patch values as target"""
     
-    def __init__(self, img_path, target_path, transform=None,seed=None, fraction=None, subset=None):
+    def __init__(self, img_path, target_path, transform=None,seed=None, fraction=None, subset=None,remove_cc = False):
 
-        self.img_path = img_path
+        self.img_path = Path(img_path)
         self.target_path = target_path
         self.targets = pd.read_csv(target_path) 
         self.transform = transform
+        self.remove_cc = remove_cc
         self.ids = next(os.walk(img_path))[2]
         if '.DS_Store' in self.ids :
             self.ids.remove('.DS_Store')
@@ -183,17 +184,27 @@ class GehlerDataset(Dataset):
             idx = idx.tolist()
             
         #get img
-        name = self.ids[idx]
-        img_name = os.path.join(self.img_path,name)
+        name  = Path(self.ids[idx])
+        img_name = str(self.img_path / name)
         image = io.imread(img_name)
         if image.max() > 1:
-          image = image/255.0
+            image = image/255.0
+        
+        #Hide color checker with black pixels 
+        if self.remove_cc:
+            mire_coord = self._get_mire_coordinates(name.stem)
+            mire_coord[:,0] = mire_coord[:,0]*img.shape[1]
+            mire_coord[:,1] = mire_coord[:,1]*img.shape[0]
+            pts = mire_coord.astype(np.int32)
+            mask = np.zeros(img.shape[:2], dtype=img.dtype)
+            mask = cv2.fillPoly(mask,[pts],(255,255))
+            img[mask == 255] = 0 
 
         #get mask
         target = self.targets.query('name == "{}"'.format(name[:-4]), inplace = False) 
         coeffs = np.array(target.values[0][1:]).astype(np.float32)
         if coeffs.max() > 1:
-          coeffs = coeffs/255.0
+            coeffs = coeffs/255.0
         sample = {'image': image, 'target': coeffs}
       
         if self.transform:
@@ -209,6 +220,22 @@ class GehlerDataset(Dataset):
         """
         nameWithExtenstion = Path(self.ids[idx])
         return nameWithExtenstion.stem
+    
+    def _get_mire_coordinates(self,name):
+        path = self.coord_path / '{}_macbeth.txt'.format(name)
+        with open(path) as fp :
+            lines = fp.readlines()
+            x,y = lines[0].split(' ')
+            r_x = np.float32(x)
+            r_y = np.float32(y)
+            mire_coord  = np.zeros((4,2))
+            for i,line in enumerate(lines[1:5]):
+                x,y = line.split(' ')
+                mire_coord[i%4,0] = np.float32(x)/r_x
+                mire_coord[i%4,1] = np.float32(y)/r_y
+        mire = mire_coord.copy()
+        mire_coord[3],mire_coord[2] = mire[2],mire[3]
+        return mire_coord
     
 ##################################
 # Data augmentation 
@@ -235,6 +262,24 @@ class RandomFlip(object):
         return sample
 
 class RandomRotate(object):
+    """
+    Data augmentation - Random Rotation 
+    """
+    def __init__(self,angle_max,p):
+        self.angle_max = angle_max
+        self.p = p
+        
+    def __call__(self,sample):
+        assert type(sample) == dict
+        image = sample['image']
+        
+        if random.random() < self.p:
+            angle = (random.random()*2 - 1)*self.angle_max
+            image = transform.rotate(image,angle)
+        sample['image'] = image
+        return sample 
+
+class RandomColorShift(object):
     """
     Data augmentation - Random Rotation 
     """
