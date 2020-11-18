@@ -17,14 +17,10 @@ import os
 
 
 class Trainer(object):
-
+  """
+  Trainer class
+  """
   def __init__(self,model,dataloaders,optimizer,criterion,metrics,config):
-    """
-    :model:
-    :dataloaders:
-    :optimizer:
-        
-    """
     self.config = config
     self.device, device_ids = self._prepare_device(config['n_gpu'])
     print(self.device,device_ids)
@@ -54,7 +50,9 @@ class Trainer(object):
       self._resume_checkpoint(config.resume)
 
   def train(self):
-
+    """
+    Training protocol 
+    """
     #best_model_wts = copy.deepcopy(self.model.state_dict())
     since = time.time()
     for epoch in range(self.start_epoch,self.num_epochs+1):
@@ -122,7 +120,10 @@ class Trainer(object):
     return self.model
 
   def _save_checkpoint(self,epoch):
-
+    """
+    Saving checkpoints
+    :param epoch: current epoch number
+    """
     arch = type(self.model).__name__
     state = {
         'arch': arch,

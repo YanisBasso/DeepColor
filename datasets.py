@@ -184,7 +184,7 @@ class GehlerDataset(Dataset):
             idx = idx.tolist()
             
         #get img
-        name  = Path(self.ids[idx])
+        name  = self.ids[idx]
         img_name = str(self.img_path / name)
         image = io.imread(img_name)
         if image.max() > 1:
@@ -192,7 +192,7 @@ class GehlerDataset(Dataset):
         
         #Hide color checker with black pixels 
         if self.remove_cc:
-            mire_coord = self._get_mire_coordinates(name.stem)
+            mire_coord = self._get_mire_coordinates(Path(name.stem))
             mire_coord[:,0] = mire_coord[:,0]*img.shape[1]
             mire_coord[:,1] = mire_coord[:,1]*img.shape[0]
             pts = mire_coord.astype(np.int32)
@@ -569,18 +569,7 @@ def get_eval_dataset(img_path,target_path, fraction=0.7) :
 
 if __name__ == "__main__":
     
-    from tqdm import tqdm 
+    dataset = GehlerDataset(img_path = "/Users/yanis/GehlerDataset/im",
+                            target_path = "/Users/yanis/GehlerDataset/colorMean.csv")
     
-    data_transforms = transforms.Compose([ 
-           Rescale(225),
-           RandomCrop(224),
-           linear2srgb(),
-           RandomFlip(),
-           RandomRotate(10,0.5)
-                     ])
-    
-    
-    dataset = GehlerRAWDataset("/Volumes/MCUSB/gehler",remove_cc = False,transform=data_transforms)
-    a = 0
-    for img in tqdm(dataset):
-        a+=1
+    print(dataset[0])
