@@ -38,11 +38,12 @@ def main(config):
     
     # build optimizer
     optimizer = config.init_obj('optimizer', torch.optim, model.parameters())
-    #print(optimizer)
+    lr_scheduler = config.init_obj('lr_scheduler', torch.optim.lr_scheduler, optimizer)
     
     trainer = Trainer(model = model,
                       dataloaders = dataloaders,
                       optimizer = optimizer,
+                      lr_scheduler=lr_scheduler,
                       criterion = criterion,
                       metrics = metrics,
                       config = config)

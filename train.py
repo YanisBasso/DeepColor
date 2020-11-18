@@ -20,7 +20,7 @@ class Trainer(object):
   """
   Trainer class
   """
-  def __init__(self,model,dataloaders,optimizer,criterion,metrics,config):
+  def __init__(self,model,dataloaders,optimizer,criterion,metrics,config,lr_scheduler = None):
     self.config = config
     self.device, device_ids = self._prepare_device(config['n_gpu'])
     print(self.device,device_ids)
@@ -30,6 +30,7 @@ class Trainer(object):
     self.criterion = criterion 
     self.metrics = metrics
     self.optimizer = optimizer
+    self.lr_scheduler = lr_scheduler
     self.num_epochs = config['trainer']['epochs']
     self.start_epoch = 1
     assert type(dataloaders) == dict
@@ -58,6 +59,8 @@ class Trainer(object):
     for epoch in range(self.start_epoch,self.num_epochs+1):
 
       print('Epoch {}/{}'.format(epoch, self.num_epochs))
+      if self.lr_scheduler is not None : 
+          print('LR    {}'.format(self.lr_scheduler.get_lr()))
       print('-' * 10)
       batchsummary = {a : [0] for a in self.fieldnames}
 
@@ -66,12 +69,19 @@ class Trainer(object):
           self.model.train()
         else :
           self.model.eval()
+          
         for sample in tqdm(iter(self.dataloaders[phase])):
+            
+          
+          # zero the parameter gradients
+          self.optimizer.zero_grad()
+          
+          if self.lr_scheduler is not None : 
+              self.lr_scheduler.step()
           
           inputs = sample['image'].to(self.device)
           targets = sample['target'].to(self.device)
-          # zero the parameter gradients
-          self.optimizer.zero_grad()
+          
           with torch.set_grad_enabled(phase == 'Train'):
             outputs = self.model(inputs)
             
@@ -90,6 +100,9 @@ class Trainer(object):
           if phase == 'Train':
               loss.backward()
               self.optimizer.step()
+          if phase == 'Test':
+              if self.lr_scheduler is not None:
+                  self.lr_scheduler.step()
 
         batchsummary['epoch'] = epoch
         epoch_loss = loss
