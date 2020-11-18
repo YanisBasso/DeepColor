@@ -26,9 +26,11 @@ class Trainer(object):
         
     """
     self.config = config
-    self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    print(f'device {self.device}')
+    self.device, device_ids = self._prepare_device(config['n_gpu'])
+    print(self.device,device_ids)
     self.model = model.to(self.device)
+    if len(device_ids) > 1:
+        self.model = torch.nn.DataParallel(model, device_ids=device_ids)
     self.criterion = criterion 
     self.metrics = metrics
     self.optimizer = optimizer
@@ -40,10 +42,11 @@ class Trainer(object):
                       [f'Train_{m}' for m in metrics.keys()] + \
                       [f'Test_{m}' for m in metrics.keys()]
     #self.best_loss = 1e10
-    self.checkpoint_dir = Path(config['trainer']['save_dir'])
+    self.checkpoint_dir = config.save_dir
     self.save_period = config['trainer']['save_period']
-
-    with open(os.path.join(self.checkpoint_dir, 'log.csv'), 'w', newline='') as csvfile:
+    
+    self.log_path = self.checkpoint_dir / 'log.csv'
+    with open(self.log_path, 'w', newline='') as csvfile:
         writer = csv.DictWriter(csvfile, fieldnames=self.fieldnames)
         writer.writeheader()
 
@@ -98,7 +101,7 @@ class Trainer(object):
         batchsummary[field] = np.mean(batchsummary[field])
       print(batchsummary)
 
-      with open(os.path.join(self.checkpoint_dir, 'log.csv'), 'a', newline='') as csvfile:
+      with open(self.log_path, 'a', newline='') as csvfile:
         writer = csv.DictWriter(csvfile, fieldnames=self.fieldnames)
         writer.writerow(batchsummary)
         
@@ -128,7 +131,7 @@ class Trainer(object):
         'optimizer': self.optimizer.state_dict(),
         'config': self.config
     }
-    filename = os.path.join(self.checkpoint_dir,'checkpoint-epoch{}.pth'.format(epoch))
+    filename = str(self.checkpoint_dir / 'checkpoint-epoch{}.pth'.format(epoch))
     torch.save(state, filename)
     print("Saving checkpoint: {} ...".format(filename))
 
@@ -149,6 +152,23 @@ class Trainer(object):
     self.optimizer.load_state_dict(checkpoint['optimizer'])
     self.model.load_state_dict(checkpoint['state_dict'])
     print("Checkpoint loaded. Resume training from epoch {}".format(self.start_epoch))
+  
+  def _prepare_device(self, n_gpu_use):
+    """
+    setup GPU device if available, move model into configured device
+    """
+    n_gpu = torch.cuda.device_count()
+    if n_gpu_use > 0 and n_gpu == 0:
+        print("Warning: There\'s no GPU available on this machine,"
+                            "training will be performed on CPU.")
+        n_gpu_use = 0
+    if n_gpu_use > n_gpu:
+        print("Warning: The number of GPU\'s configured to use is {}, but only {} are available "
+              "on this machine.".format(n_gpu_use, n_gpu))
+        n_gpu_use = n_gpu
+    device = torch.device('cuda:0' if n_gpu_use > 0 else 'cpu')
+    list_ids = list(range(n_gpu_use))
+    return device, list_ids
 
 
 def train_model(model, criterion, dataloaders, optimizer, metrics, bpath, num_epochs=3):
