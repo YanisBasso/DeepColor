@@ -113,8 +113,7 @@ class GehlerRAWDataset(Dataset):
             pts = mire_coord.astype(np.int32)
             mask = np.zeros(img.shape[:2], dtype=img.dtype)
             mask = cv2.fillPoly(mask,[pts],(255,255))
-            img[mask == 255] = 0
-            
+            img[mask == 255] = 0 
         if self.transform:
             img = self.transform(img)
         return img
@@ -525,11 +524,18 @@ def get_eval_dataset(img_path,target_path, fraction=0.7) :
 
 if __name__ == "__main__":
     
-    dataset = GehlerRAWDataset("/Volumes/MCUSB/gehler",remove_cc = False,transform = linear2srgb())
-    img = dataset[49]
-    print(f'img shape : {img.shape}')
-    print(f'img max : {img.max()}')
-    print(f'img min : {img.min()}')
-    print(f'img type : {img.dtype}')
-    plt.imshow(img)
-    plt.show()
+    from tqdm import tqdm 
+    
+    data_transforms = transforms.Compose([ 
+           Rescale(225),
+           RandomCrop(224),
+           linear2srgb(),
+           RandomFlip(),
+           RandomRotate(10,0.5)
+                     ])
+    
+    
+    dataset = GehlerRAWDataset("/Volumes/MCUSB/gehler",remove_cc = False,transform=data_transforms)
+    a = 0
+    for img in tqdm(dataset):
+        a+=1
