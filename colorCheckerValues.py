@@ -34,3 +34,5 @@ MACBETH_COLOR = np.array([[116,81,67],
 
 MACBETH_COLOR_HEX = ["#{0:02x}{1:02x}{2:02x}".format(r, g, b) for r,g,b 
                      in zip(MACBETH_COLOR[:,0],MACBETH_COLOR[:,1],MACBETH_COLOR[:,2])]
+
+
