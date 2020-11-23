@@ -193,6 +193,23 @@ class RemoveShadingTarget(object):
         target[:,2] = target[:,2]/lum
         sample['target'] = target[:,:2]
         return sample 
+    
+class PrepareTarget(object):
+    
+    def __call__(self,sample):
+        target = sample['target']
+        
+        #Remove shading 
+        lum = np.sum(target,axis=1)
+        target[:,0] = target[:,0]/lum
+        target[:,1] = target[:,1]/lum
+        target[:,2] = target[:,2]/lum
+        target = target[:,:2]
+        
+        #Create white-patche values 
+        target[18] = np.mean(target[18:],axis=0)
+        sample['target'] = target[:19]
+        return sample 
 
 class RandomColorShift(object):
     """
@@ -227,16 +244,25 @@ class RandomColorShift(object):
     
 if __name__ == '__main__':
     
+    data_transform = transforms.Compose([
+                                     Rescale(230),
+                                     RandomCrop(224),
+                                     PrepareTarget(),
+                                     ToTensor(),
+                                     Normalize(mean=(0.485, 0.456, 0.406),
+                                     std=(0.229, 0.224, 0.225))])
+    
     
     gd = GehlerDataset2(dir_path = "/Users/yanis/GehlerDataset",
                        remove_cc = True,
                        seed=12, 
                        fraction=0.7, 
                        subset='Train', 
-                       transform=None
+                       transform=data_transform
                        )
     
     sample = gd[20]
+    '''
     plt.figure()
     plt.imshow(sample['image'])
     create_mire(sample['target'])
@@ -246,6 +272,11 @@ if __name__ == '__main__':
     plt.figure()
     plt.imshow(sample['image'])
     create_mire(sample['target'])
+    '''
+    target = sample['target']
+    print(target.shape)
+
+    
     
     
     

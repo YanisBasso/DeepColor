@@ -668,6 +668,24 @@ class RemoveShadingTarget(object):
         target[:,2] = target[:,2]/lum
         sample['target'] = target[:,:2]
         return sample 
+
+class PrepareTarget(object):
+    
+    def __call__(self,sample):
+        target = sample['target']
+        
+        #Remove shading 
+        lum = np.sum(target,axis=1)
+        target[:,0] = target[:,0]/lum
+        target[:,1] = target[:,1]/lum
+        target[:,2] = target[:,2]/lum
+        target = target[:,:2]
+        
+        #Create white-patche values 
+        target[18] = np.mean(target[18:],axis=0)
+        sample['target'] = target[:19].ravel()
+        return sample 
+    
 ##################################
 # Data preprocessing 
 ##################################
@@ -717,7 +735,7 @@ def get_dataloader2(dir_path,target_path,fraction=0.7,batch_size=32):
            RandomColorShift(0.6,1.4),
            RandomFlip(),
            RandomRotate(10,0.5),
-           RemoveShadingTarget(),
+           PrepareTarget(),
            ToTensor(),
            Normalize(mean=[0.485, 0.456, 0.406],
                      std=[0.229, 0.224, 0.225])
@@ -725,7 +743,7 @@ def get_dataloader2(dir_path,target_path,fraction=0.7,batch_size=32):
         'Test': transforms.Compose([
            Rescale(230),
            RandomCrop(224),
-           RemoveShadingTarget(),
+           PrepareTarget(),
            ToTensor(),
            Normalize(mean=[0.485, 0.456, 0.406],
                      std=[0.229, 0.224, 0.225])
