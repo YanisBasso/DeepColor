@@ -423,8 +423,8 @@ class RandomColorShift(object):
         assert type(sample) == dict
         image,target = sample['image'],sample['target']
         
-        image = srgb2linear(image)
-        target = srgb2linear(target)
+        #image = srgb2linear(image)
+        #target = srgb2linear(target)
         
         r_shift = random.random()*(self.max_value - self.min_value) + self.min_value
         b_shift = random.random()*(self.max_value - self.min_value) + self.min_value
@@ -435,8 +435,8 @@ class RandomColorShift(object):
         target[:,0] = target[:,0]*r_shift
         target[:,2] = target[:,2]*b_shift
         
-        image = linear2srgb(image)
-        target = linear2srgb(target)
+        #image = linear2srgb(image)
+        #target = linear2srgb(target)
 
         return {'image':image,'target':target}
         
