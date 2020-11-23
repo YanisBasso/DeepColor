@@ -23,9 +23,22 @@ import cv2
 import random 
 
 class GehlerDataset2(Dataset):
-    """Gheler dataset in RAW format with rg values as target"""
+    """Regression dataset made from Gehler dataset"""
     def __init__(self, dir_path, target_path=None, remove_cc=None, seed=None, 
                  fraction=None, subset=None, transform=None):
+        """
+        :param dir_path: Name of the path where the images and coordinates 
+            are stored.
+        :param target_path: Name of the cvs file containing target. If None, 
+            the targets are computed from the image.
+        :param remove_cc: Boolean which specify if the color checker has to be 
+            hide during image loading.
+        :param seed: Specify a seed for the train and test split.
+        :param fraction: A float value from 0 to 1 which specifies the validation split fraction.
+
+        :param subset: 'Train' or 'Test' to select the appropriate set.
+        :param transform: Optional transform to be applied on a sample.
+        """
         self.dir_path = Path(dir_path)
         self.img_path = self.dir_path / 'im'
         self.coord_path = self.dir_path / 'coord'
@@ -70,13 +83,14 @@ class GehlerDataset2(Dataset):
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         img = img/255
         
+        
         if self.target_path :
             target = self.targets.query('name == "{}"'.format(name[:-4]), inplace = False) 
             target = np.array(target.values[0][1:]).astype(np.float32)
         else : 
             patches_coord = self._get_patches_coordinates(Path(name).stem)
             target = self._extract_target(patches_coord,img)
-            
+        
         if self.remove_cc :
             mire_coord = self._get_mire_coordinates(Path(name).stem)
             mire_coord[:,0] = mire_coord[:,0]*img.shape[1]
@@ -93,6 +107,8 @@ class GehlerDataset2(Dataset):
     
     
     def _get_mire_coordinates(self,name):
+        """
+        """
         path = self.coord_path / '{}_macbeth.txt'.format(name)
         with open(path) as fp :
             lines = fp.readlines()
@@ -220,7 +236,7 @@ if __name__ == '__main__':
                        transform=None
                        )
     
-    sample = gd[15]
+    sample = gd[20]
     plt.figure()
     plt.imshow(sample['image'])
     create_mire(sample['target'])
@@ -230,6 +246,9 @@ if __name__ == '__main__':
     plt.figure()
     plt.imshow(sample['image'])
     create_mire(sample['target'])
+    
+    
+    
     
     
     
