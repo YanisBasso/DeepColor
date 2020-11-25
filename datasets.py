@@ -27,217 +27,7 @@ import random
 import warnings
 warnings.filterwarnings("ignore")
 
-class ChengDataset(Dataset):
-    """Cheng dataset with rg colorchecker patch values as target"""
-    
-    def __init__(self,img_path,target_path,transform=None,seed=None,fraction=None,subset=None):
-        
-        self.img_path = img_path
-        self.target_path = target_path
-        self.targets = pd.read_csv(target_path) 
-        self.transform = transform
-        self.camera_sensors = next(os.walk(img_path))[1]
-        
-        first_dir = os.path.join(self.img_path,self.camera_sensors[0])
-        self.ids = next(os.walk(first_dir))[2]
-        
-        
-        if fraction :
-            assert(subset in ['Train', 'Test'])
-            self.fraction = fraction
-            if seed:
-                np.random.seed(seed)
-                indices = np.arange(len(self.ids))
-                np.random.shuffle(indices)
-                self.ids = self.ids[indices]
-            if subset == 'Test':
-                self.ids = self.ids[:int(
-                    np.ceil(len(self.ids)*(1-self.fraction)))]
-            else:
-                self.ids = self.ids[int(
-                    np.ceil(len(self.ids)*(1-self.fraction))):]
-    def __len__(self):
-        return len(self.ids)
-    
-    def __getitem__(self, idx):
-        raise NotImplementedError
-        
-    def _get_image_ids(self):
-        
-        first_dir = os.path.join(self.img_path,self.camera_sensors[0])
-        ids = next(os.walk(first_dir))[2]
-        ids = [index.split('_')[1] for index in ids]
-        return ids
-
-class GehlerRAWDataset(Dataset):
-    """Gheler dataset in RAW format with rg values as target"""
-    def __init__(self,dir_path,transform=None,remove_cc = None):
-        self.dir_path = Path(dir_path)
-        self.img_path = self.dir_path / 'image'
-        self.coord_path = self.dir_path / 'coord'
-        self.transform = transform
-        
-        self.ids = next(os.walk(self.img_path))[2]
-        self.ids = self.ids[::2]
-        self.remove_cc = remove_cc
-        if '.DS_Store' in self.ids :
-            self.ids.remove('.DS_Store')
-            self.ids = np.array(self.ids)
-            
-    def __len__(self):
-        return len(self.ids)
-    
-    def __getitem__(self,idx):
-        
-        if torch.is_tensor(idx):
-            idx = idx.tolist()
-        #get img 
-        name  = Path(self.ids[idx])
-        img_path = str(self.img_path / name)
-        raw = np.array(cv2.imread(img_path, -1), dtype='float32')
-        raw = cv2.cvtColor(raw, cv2.COLOR_BGR2RGB)
-        #Set black_point
-        if name.stem.split('_')[0] == 'IMG':
-            black_point = 129
-        else : 
-            black_point = 1
-            
-        raw = np.maximum(raw - black_point, [0,0,0])
-        img = (np.clip(raw / raw.max(), 0, 1) * 1.0)
-        
-        #Hide color checker with black pixels 
-        if self.remove_cc:
-            mire_coord = self._get_mire_coordinates(name.stem)
-            mire_coord[:,0] = mire_coord[:,0]*img.shape[1]
-            mire_coord[:,1] = mire_coord[:,1]*img.shape[0]
-            pts = mire_coord.astype(np.int32)
-            mask = np.zeros(img.shape[:2], dtype=img.dtype)
-            mask = cv2.fillPoly(mask,[pts],(255,255))
-            img[mask == 255] = 0 
-        if self.transform:
-            img = self.transform(img)
-        return img
-    
-    def _get_mire_coordinates(self,name):
-        path = self.coord_path / '{}_macbeth.txt'.format(name)
-        with open(path) as fp :
-            lines = fp.readlines()
-            x,y = lines[0].split(' ')
-            r_x = np.float32(x)
-            r_y = np.float32(y)
-            mire_coord  = np.zeros((4,2))
-            for i,line in enumerate(lines[1:5]):
-                x,y = line.split(' ')
-                mire_coord[i%4,0] = np.float32(x)/r_x
-                mire_coord[i%4,1] = np.float32(y)/r_y
-        mire = mire_coord.copy()
-        mire_coord[3],mire_coord[2] = mire[2],mire[3]
-        return mire_coord 
-            
-    
-    def getName(self,idx) :
-        """
-        get the name of a given image 
-        
-        :idx: int - index of image in the dataset 
-        :return: string - name of the image without extension
-        """
-        nameWithExtenstion = Path(self.ids[idx])
-        return nameWithExtenstion.stem
-
-            
-        
 class GehlerDataset(Dataset):
-    """Gheler dataset with rg colorchecker patch values as target"""
-    
-    def __init__(self, img_path, target_path, transform=None,seed=None, fraction=None, subset=None,remove_cc = False):
-
-        self.img_path = Path(img_path)
-        self.target_path = target_path
-        self.targets = pd.read_csv(target_path) 
-        self.transform = transform
-        self.remove_cc = remove_cc
-        self.ids = next(os.walk(img_path))[2]
-        if '.DS_Store' in self.ids :
-            self.ids.remove('.DS_Store')
-            self.ids = np.array(self.ids)
-        if fraction :
-            assert(subset in ['Train', 'Test'])
-            self.fraction = fraction
-            if seed:
-                np.random.seed(seed)
-                indices = np.arange(len(self.ids))
-                np.random.shuffle(indices)
-                self.ids = self.ids[indices]
-            if subset == 'Test':
-                self.ids = self.ids[:int(
-                    np.ceil(len(self.ids)*(1-self.fraction)))]
-            else:
-                self.ids = self.ids[int(
-                    np.ceil(len(self.ids)*(1-self.fraction))):]
-
-    def __len__(self):
-        return len(self.ids)
-
-    def __getitem__(self, idx):
-        if torch.is_tensor(idx):
-            idx = idx.tolist()
-            
-        #get img
-        name  = self.ids[idx]
-        img_name = str(self.img_path / name)
-        image = io.imread(img_name)
-        if image.max() > 1:
-            image = image/255.0
-        
-        #Hide color checker with black pixels 
-        if self.remove_cc:
-            mire_coord = self._get_mire_coordinates(Path(name.stem))
-            mire_coord[:,0] = mire_coord[:,0]*img.shape[1]
-            mire_coord[:,1] = mire_coord[:,1]*img.shape[0]
-            pts = mire_coord.astype(np.int32)
-            mask = np.zeros(img.shape[:2], dtype=img.dtype)
-            mask = cv2.fillPoly(mask,[pts],(255,255))
-            img[mask == 255] = 0 
-
-        #get mask
-        target = self.targets.query('name == "{}"'.format(name[:-4]), inplace = False) 
-        coeffs = np.array(target.values[0][1:]).astype(np.float32)
-        if coeffs.max() > 1:
-            coeffs = coeffs/255.0
-        sample = {'image': image, 'target': coeffs}
-      
-        if self.transform:
-            sample = self.transform(sample)
-        return sample
-    
-    def getName(self,idx) :
-        """
-        get the name of a given image 
-        
-        :idx: int - index of image in the dataset 
-        :return: string - name of the image without extension
-        """
-        nameWithExtenstion = Path(self.ids[idx])
-        return nameWithExtenstion.stem
-    
-    def _get_mire_coordinates(self,name):
-        path = self.coord_path / '{}_macbeth.txt'.format(name)
-        with open(path) as fp :
-            lines = fp.readlines()
-            x,y = lines[0].split(' ')
-            r_x = np.float32(x)
-            r_y = np.float32(y)
-            mire_coord  = np.zeros((4,2))
-            for i,line in enumerate(lines[1:5]):
-                x,y = line.split(' ')
-                mire_coord[i%4,0] = np.float32(x)/r_x
-                mire_coord[i%4,1] = np.float32(y)/r_y
-        mire = mire_coord.copy()
-        mire_coord[3],mire_coord[2] = mire[2],mire[3]
-        return mire_coord
-
-class GehlerDataset2(Dataset):
     """Regression dataset made from Gehler dataset"""
     def __init__(self, dir_path, target_path=None, remove_cc=None, seed=None, 
                  fraction=None, subset=None, transform=None):
@@ -368,6 +158,7 @@ class GehlerDataset2(Dataset):
     def get_name(self,idx):
         return Path(self.ids[idx]).stem
     
+
 ##################################
 # Data augmentation 
 ##################################
@@ -674,6 +465,9 @@ class PrepareTarget(object):
     def __call__(self,sample):
         target = sample['target']
         
+        #Linearise
+        target = srgb2linear(target)
+        
         #Remove shading 
         lum = np.sum(target,axis=1)
         target[:,0] = target[:,0]/lum
@@ -691,44 +485,8 @@ class PrepareTarget(object):
 ##################################
 
 
-def get_dataloader(img_path,target_path, fraction=0.7, batch_size=4):
-    """
-        Create training and testing dataloaders from a single folder.
-    """
-    data_transforms =     data_transforms = {
-        'Train': transforms.Compose([ 
-           Rescale(225),
-           RandomCrop(224),
-           RandomFlip(),
-           RandomRotate(10,0.5),
-           ToTensor(),
-           Normalize(mean=[0.485, 0.456, 0.406],
-                     std=[0.229, 0.224, 0.225])
-                     ]),
-        'Test': transforms.Compose([
-           Rescale(230),
-           RandomCrop(224),
-           ToTensor(),
-           Normalize(mean=[0.485, 0.456, 0.406],
-                     std=[0.229, 0.224, 0.225])
-                     ])
-    }
-
-    image_datasets = {x: GehlerDataset(img_path = img_path,
-                                target_path = target_path,
-                                transform = data_transforms[x],
-                                seed = 12,
-                                fraction = fraction,
-                                subset = x)
-                  for x in ['Train', 'Test']}
-    
-    dataloaders = {x: DataLoader(image_datasets[x], batch_size=batch_size,
-                                 shuffle=True, num_workers=8)
-                   for x in ['Train', 'Test']}
-    return dataloaders
-
-def get_dataloader2(dir_path,target_path,fraction=0.7,batch_size=32):
-    data_transforms =     data_transforms = {
+def get_dataloader(dir_path, target_path=None, fraction=0.7, batch_size=32):
+    data_transforms = {
         'Train': transforms.Compose([ 
            Rescale(225),
            RandomCrop(224),
@@ -750,39 +508,23 @@ def get_dataloader2(dir_path,target_path,fraction=0.7,batch_size=32):
                      ])
     }
     
-    image_datasets = {x: GehlerDataset2(dir_path = dir_path,
-                                        transform = data_transforms[x],
-                                        remove_cc = True,
-                                        seed=12, 
-                                        fraction=fraction, 
-                                        subset=x)
-                  for x in ['Train', 'Test']}
+    image_datasets = {x: GehlerDataset(dir_path = dir_path,
+                                       target_path = target_path,
+                                       transform = data_transforms[x],
+                                       remove_cc = True,
+                                       seed=12, 
+                                       fraction=fraction, 
+                                       subset=x)
+                      for x in ['Train', 'Test']}
     
     dataloaders = {x: DataLoader(image_datasets[x], batch_size=batch_size,
-                                 shuffle=True, num_workers=1)
+                                 shuffle=True, num_workers=4)
                    for x in ['Train', 'Test']}
     
     return dataloaders
     
-def get_eval_dataset(img_path,target_path, fraction=0.7) :
-    
-    data_transform = transforms.Compose([
-                                     Rescale(230),
-                                     RandomCrop(224),
-                                     ToTensor(),
-                                     Normalize(mean=(0.485, 0.456, 0.406),
-                                     std=(0.229, 0.224, 0.225))])
-    
-    test_dataset = GehlerDataset(img_path = img_path,
-                   target_path = target_path,
-                   transform = None,
-                   seed = 12,
-                   fraction = fraction,
-                   subset = 'Test')
-    
-    return data_transform,test_dataset
 
-def get_eval_dataset2(img_path,target_path, fraction=0.7) :
+def get_eval_dataset(dir_path, target_path=None, fraction=0.7) :
     
     data_transform = transforms.Compose([
                                      Rescale(230),
@@ -792,12 +534,14 @@ def get_eval_dataset2(img_path,target_path, fraction=0.7) :
                                      Normalize(mean=(0.485, 0.456, 0.406),
                                      std=(0.229, 0.224, 0.225))])
     
-    test_dataset = GehlerDataset(img_path = img_path,
-                   target_path = target_path,
-                   transform = None,
-                   seed = 12,
-                   fraction = fraction,
-                   subset = 'Test')
+    
+    test_dataset = GehlerDataset(dir_path = dir_path,
+                                 target_path = target_path,
+                                 transform = data_transform,
+                                 remove_cc = True,
+                                 seed=12, 
+                                 fraction=fraction, 
+                                 subset='Test')
     
     return data_transform,test_dataset
 
@@ -813,10 +557,10 @@ if __name__ == "__main__":
            #RemoveShadingTarget()
            ])
     
-    dataloaders = get_dataloader2(dir_path="/Users/yanis/GehlerDataset",
+    dataloaders = get_dataloader(dir_path="/Users/yanis/GehlerDataset",
                                  target_path = None,
-                                  fraction=0.7,
-                                  batch_size=32)
+                                 fraction=0.7,
+                                 batch_size=32)
     
     iterator = iter(dataloaders['Train'])
     sample = next(iterator)
