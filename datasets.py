@@ -29,7 +29,7 @@ warnings.filterwarnings("ignore")
 
 class GehlerDataset(Dataset):
     """Regression dataset made from Gehler dataset"""
-    def __init__(self, dir_path, target_path=None, remove_cc=None, seed=None, 
+    def __init__(self, dir_path, load_target=False, remove_cc=None, seed=None, 
                  fraction=None, subset=None, transform=None):
         """
         :param dir_path: Name of the path where the images and coordinates 
@@ -49,11 +49,9 @@ class GehlerDataset(Dataset):
         self.coord_path = self.dir_path / 'coord'
         self.transform = transform
         self.remove_cc = remove_cc
+        self.load_target = load_target
         
-        self.target_path = target_path
-        if target_path :
-            self.targets = pd.read_csv(self.target_path) 
-        
+        #list image names 
         self.ids = next(os.walk(self.img_path))[2]
         if '.DS_Store' in self.ids :
             self.ids.remove('.DS_Store')
@@ -85,13 +83,10 @@ class GehlerDataset(Dataset):
         name  = self.ids[idx]
         img_path = str(self.img_path / name)
         img = io.imread(img_path)
-        #img = np.array(cv2.imread(img_path, -1), dtype='uint8')
-        #img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-        img = img/255
+        #img = img/255
         
-        if self.target_path :
-            target = self.targets.query('name == "{}"'.format(name[:-4]), inplace = False) 
-            target = np.array(target.values[0][1:]).astype(np.float32)
+        if self.load_target :
+            target = self._load_target(Path(name).stem)
         else : 
             patches_coord = self._get_patches_coordinates(Path(name).stem)
             target = self._extract_target(patches_coord,img)
@@ -154,6 +149,18 @@ class GehlerDataset(Dataset):
             pixel_info = img[mask == 255]
             targets[i] = np.mean(pixel_info,axis=0)
         return targets
+    
+    def _load_target(self,name):
+        path = self.dir_path / "target" / f"{name}.txt"
+        targets = np.zeros((24,3))
+        with open(path,"r") as fp :
+            lines = fp.readlines()
+            for i,line in enumerate(lines) :
+                line = line.rstrip()
+                r,g,b = line.split(',')
+                targets[i,:] = [r,g,b]
+        return targets
+            
     
     def get_name(self,idx):
         return Path(self.ids[idx]).stem
@@ -219,6 +226,9 @@ class RandomColorShift(object):
         
         r_shift = random.random()*(self.max_value - self.min_value) + self.min_value
         b_shift = random.random()*(self.max_value - self.min_value) + self.min_value
+        
+        print('r_shift : ',r_shift)
+        print('b_shift : ',b_shift)
         
         image[:,:,0] = image[:,:,0]*r_shift
         image[:,:,2] = image[:,:,2]*b_shift
@@ -548,23 +558,33 @@ def get_eval_dataset(dir_path, target_path=None, fraction=0.7) :
 
 if __name__ == "__main__":
     
+    from time import time 
+    
     data_transform = transforms.Compose([ 
-           Rescale(225),
-           RandomCrop(224),
-           #RandomColorShift(0.6,1.4),
-           RandomFlip(),
-           RandomRotate(10,0.5)
-           #RemoveShadingTarget()
-           ])
+                                            Rescale(225),
+                                            RandomCrop(224),
+                                            RandomColorShift(0.8,1.2),
+                                            RandomFlip(),
+                                            RandomRotate(10,0.5)
+                                                      ])
     
-    dataloaders = get_dataloader(dir_path="/Users/yanis/GehlerDataset",
-                                 target_path = None,
-                                 fraction=0.7,
-                                 batch_size=32)
+    dataset = GehlerDataset(dir_path = "/Users/yanis/GehlerDataset",
+                            load_target = True,
+                            remove_cc = True,
+                            transform = data_transform)
     
-    iterator = iter(dataloaders['Train'])
-    sample = next(iterator)
-    print(sample['target'].shape)
+    
+    plt.figure()
+    sample = dataset[ind]
+    plt.imshow(sample['image'])
+    
+    print(sample['target'])
+    
+    
+
+        
+    
+    
 
 
 

@@ -8,6 +8,7 @@ Created on Mon Nov  2 14:51:56 2020
 
 from torch import nn
 from torchvision import models
+from torchsummary import summary 
 
 class FinetuneResNet(nn.Module):
     
@@ -47,7 +48,48 @@ class FinetuneResNet(nn.Module):
         return str(self.model)
         
         
+class FinetuneResnet2(nn.Module):
+    def __init__(self, backbone_version, num_classes, feature_extracting, use_pretrained = True):
+        super(FinetuneResnet2, self).__init__()
+
+        assert backbone_version in ['resnet18','resnet50','resnet101']
+        self.backbone_version = backbone_version 
+        #Download pre-trained module
+        self.model = getattr(models,self.backbone_version)(use_pretrained)
         
+        self._set_parameter_requires_grad(feature_extracting)
+        self.fc1 = nn.Linear(2048*7*7, num_classes)
+        
+        
+    
+    def _set_parameter_requires_grad(self, feature_extracting):
+            if feature_extracting:
+                for param in self.model.parameters():
+                    param.requires_grad = False
+
+    def forward(self, x):
+        x = self.model.conv1(x)
+        x = self.model.bn1(x)
+        x = self.model.relu(x)
+        x = self.model.maxpool(x)
+
+        x = self.model.layer1(x)
+        x = self.model.layer2(x)
+        x = self.model.layer3(x)
+        x = self.model.layer4(x)
+        
+        x = x.view(x.size(0), -1)
+        x = nn.functional.relu(self.fc1(x))
+
+        return x       
+    
+if __name__ == "__main__":
+    
+    model = FinetuneResnet2(backbone_version = 'resnet50',
+                            num_classes = 20,
+                            feature_extracting = True,
+                            )
+    summary(model, (3, 224, 224))
         
 '''
 def set_parameter_requires_grad(model, feature_extracting):
