@@ -226,10 +226,7 @@ class RandomColorShift(object):
         
         r_shift = random.random()*(self.max_value - self.min_value) + self.min_value
         b_shift = random.random()*(self.max_value - self.min_value) + self.min_value
-        
-        print('r_shift : ',r_shift)
-        print('b_shift : ',b_shift)
-        
+
         image[:,:,0] = image[:,:,0]*r_shift
         image[:,:,2] = image[:,:,2]*b_shift
         
@@ -560,31 +557,49 @@ if __name__ == "__main__":
     
     from time import time 
     
-    data_transform = transforms.Compose([ 
-                                            Rescale(225),
-                                            RandomCrop(224),
-                                            RandomColorShift(0.8,1.2),
-                                            RandomFlip(),
-                                            RandomRotate(10,0.5)
-                                                      ])
     
-    dataset = GehlerDataset(dir_path = "/Users/yanis/GehlerDataset",
-                            load_target = True,
-                            remove_cc = True,
-                            transform = data_transform)
+    data_transforms = {
+        'Train': transforms.Compose([ 
+            Rescale(225),
+            RandomCrop(224),
+            RandomColorShift(0.8,1.2),
+            RandomFlip(),
+            RandomRotate(10,0.5),
+            PrepareTarget(),
+            ToTensor(),
+            Normalize(mean=[0.485, 0.456, 0.406],
+                      std=[0.229, 0.224, 0.225])
+                      ]),
+        'Test': transforms.Compose([
+            Rescale(230),
+            RandomCrop(224),
+            PrepareTarget(),
+            ToTensor(),
+            Normalize(mean=[0.485, 0.456, 0.406],
+                      std=[0.229, 0.224, 0.225])
+                      ])
+    }
     
+    image_datasets = {x: GehlerDataset(dir_path = "/Users/yanis/GehlerDataset",
+                                        load_target = True,
+                                        transform = data_transforms[x],
+                                        remove_cc = False,
+                                        seed=12, 
+                                        fraction=0.7, 
+                                        subset=x)
+                      for x in ['Train', 'Test']}
     
-    plt.figure()
-    sample = dataset[ind]
-    plt.imshow(sample['image'])
-    
-    print(sample['target'])
+    dataloaders = {x: DataLoader(image_datasets[x], batch_size=32,
+                                  shuffle=True, num_workers=4)
+                    for x in ['Train', 'Test']}
     
     
 
         
     
-    
+    iterator = iter(dataloaders['Train'])
+    sample = next(iterator)
+    print(sample)
 
 
 
