@@ -53,6 +53,8 @@ class GehlerDataset(Dataset):
         
         #list image names 
         self.ids = next(os.walk(self.img_path))[2]
+        print(self.ids)
+        print(type(self.ids))
         if '.DS_Store' in self.ids :
             self.ids.remove('.DS_Store')
             self.ids = np.array(self.ids)
@@ -63,7 +65,6 @@ class GehlerDataset(Dataset):
             if seed:
                 np.random.seed(seed)
                 indices = np.arange(len(self.ids))
-                print(indices)
                 np.random.shuffle(indices)
                 self.ids = self.ids[indices]
             if subset == 'Test':
