@@ -63,6 +63,7 @@ class GehlerDataset(Dataset):
             if seed:
                 np.random.seed(seed)
                 indices = np.arange(len(self.ids))
+                print(indices)
                 np.random.shuffle(indices)
                 self.ids = self.ids[indices]
             if subset == 'Test':
@@ -596,10 +597,6 @@ if __name__ == "__main__":
     
 
         
-    
-    iterator = iter(dataloaders['Train'])
-    sample = next(iterator)
-    print(sample)
 
 
 
