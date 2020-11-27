@@ -30,7 +30,7 @@ warnings.filterwarnings("ignore")
 class GehlerDataset(Dataset):
     """Regression dataset made from Gehler dataset"""
     def __init__(self, dir_path, load_target=False, remove_cc=None, seed=None, 
-                 fraction=None, subset=None, transform=None):
+                 fraction=None, subset=None, transform=None, nb_image = None):
         """
         :param dir_path: Name of the path where the images and coordinates 
             are stored.
@@ -50,13 +50,18 @@ class GehlerDataset(Dataset):
         self.transform = transform
         self.remove_cc = remove_cc
         self.load_target = load_target
+        self.nb_image = nb_image
         
         #list image names 
         self.ids = next(os.walk(self.img_path))[2]
         if '.DS_Store' in self.ids :
             self.ids.remove('.DS_Store')
+            
+        if nb_image :
+            assert nb_image > 0 and nb_image < len(self.ids)
+            self.ids= self.ids[:nb_image]
+            
         self.ids = np.array(self.ids)
-        
         if fraction :
             assert(subset in ['Train', 'Test'])
             self.fraction = fraction
@@ -71,7 +76,7 @@ class GehlerDataset(Dataset):
             else:
                 self.ids = self.ids[int(
                     np.ceil(len(self.ids)*(1-self.fraction))):]
-            
+        
     def __len__(self):
         return len(self.ids)
     
@@ -578,6 +583,18 @@ if __name__ == "__main__":
                       ])
     }
     
+    image_dataset = GehlerDataset(dir_path = "/Users/yanis/GehlerDataset",
+                                        load_target = True,
+                                        transform = data_transforms['Test'],
+                                        remove_cc = False,
+                                        seed=12, 
+                                        nb_image = -1,
+                                        fraction=0.7, 
+                                        subset='Test')
+    
+    print(len(image_dataset))
+    
+    '''
     image_datasets = {x: GehlerDataset(dir_path = "/Users/yanis/GehlerDataset",
                                         load_target = True,
                                         transform = data_transforms[x],
@@ -590,7 +607,7 @@ if __name__ == "__main__":
     dataloaders = {x: DataLoader(image_datasets[x], batch_size=32,
                                   shuffle=True, num_workers=4)
                     for x in ['Train', 'Test']}
-    
+    '''
     
     
         
