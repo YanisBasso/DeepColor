@@ -53,11 +53,9 @@ class GehlerDataset(Dataset):
         
         #list image names 
         self.ids = next(os.walk(self.img_path))[2]
-        print(self.ids)
-        print(type(self.ids))
         if '.DS_Store' in self.ids :
             self.ids.remove('.DS_Store')
-            self.ids = np.array(self.ids)
+        self.ids = np.array(self.ids)
         
         if fraction :
             assert(subset in ['Train', 'Test'])
@@ -557,8 +555,6 @@ def get_eval_dataset(dir_path, target_path=None, fraction=0.7) :
 
 if __name__ == "__main__":
     
-    from time import time 
-    
     
     data_transforms = {
         'Train': transforms.Compose([ 
@@ -596,7 +592,7 @@ if __name__ == "__main__":
                     for x in ['Train', 'Test']}
     
     
-
+    
         
 
 
