@@ -88,7 +88,7 @@ class GehlerDataset(Dataset):
         name  = self.ids[idx]
         img_path = str(self.img_path / name)
         img = io.imread(img_path)
-        #img = img/255
+        img = (img/255).astype(np.float32)
         
         if self.load_target :
             target = self._load_target(Path(name).stem)
@@ -378,7 +378,7 @@ class Rescale(object):
 
       new_h, new_w = int(new_h), int(new_w)
       image = cv2.resize(image, (new_w,new_h), interpolation = cv2.INTER_NEAREST)
-
+      
       if type(sample) == dict:
         return {'image': image, 'target': target}
       elif type(sample) == np.ndarray:
@@ -404,7 +404,6 @@ class Normalize(object):
         elif type(sample) in [np.ndarray,torch.Tensor]:
             image = sample
             image = self.norm(image)
-            print(image)
             return image
 
 class UnNormalize(object):
@@ -583,18 +582,7 @@ if __name__ == "__main__":
                       ])
     }
     
-    image_dataset = GehlerDataset(dir_path = "/Users/yanis/GehlerDataset",
-                                        load_target = True,
-                                        transform = data_transforms['Test'],
-                                        remove_cc = False,
-                                        seed=12, 
-                                        nb_image = 20,
-                                        fraction=0.7, 
-                                        subset='Test')
-    
-    print(len(image_dataset))
-    
-    '''
+
     image_datasets = {x: GehlerDataset(dir_path = "/Users/yanis/GehlerDataset",
                                         load_target = True,
                                         transform = data_transforms[x],
@@ -607,11 +595,15 @@ if __name__ == "__main__":
     dataloaders = {x: DataLoader(image_datasets[x], batch_size=32,
                                   shuffle=True, num_workers=4)
                     for x in ['Train', 'Test']}
-    '''
-    
-    
-        
 
+
+    from utils import reverse_transform
+    image =  image_datasets['Train'][1]['image']
+    image = reverse_transform(image)
+    print('Dtype : {}'.format(image.dtype))
+    print('min : {}'.format(image.min()))
+    print('max : {}'.format(image.max()))
+    plt.imshow(image)
 
 
     

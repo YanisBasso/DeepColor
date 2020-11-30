@@ -262,7 +262,6 @@ def visualizePrediction(model,dataloader):
   nb_image = min(4,inputs.shape[0])
   for i in range(nb_image):
     image_plot = reverse_transform(inputs[i].cpu())
-    print(image_plot)
     y_pred = outputs[i]
     y_true = targets[i]
     fig, (ax1,ax2) = plt.subplots(nrows=1,ncols=2,figsize=(10,4))
