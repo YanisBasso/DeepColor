@@ -588,7 +588,7 @@ if __name__ == "__main__":
                                         transform = data_transforms['Test'],
                                         remove_cc = False,
                                         seed=12, 
-                                        nb_image = -1,
+                                        nb_image = 20,
                                         fraction=0.7, 
                                         subset='Test')
     

@@ -259,7 +259,7 @@ def visualizePrediction(model,dataloader):
   targets.detach().numpy()
   outputs.detach().numpy()
   
-  nb_image = min(4,sample.shape[0])
+  nb_image = min(4,inputs.shape[0])
   for i in range(nb_image):
     image_plot = reverse_transform(inputs[i].cpu())
     print(image_plot)
