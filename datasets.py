@@ -496,7 +496,7 @@ class PrepareTarget(object):
 ##################################
 
 
-def get_dataloader(dir_path, target_path=None, fraction=0.7, batch_size=32):
+def get_dataloader(dir_path, load_target=True, fraction=0.7, batch_size=32):
     data_transforms = {
         'Train': transforms.Compose([ 
            Rescale(225),
@@ -518,9 +518,9 @@ def get_dataloader(dir_path, target_path=None, fraction=0.7, batch_size=32):
                      std=[0.229, 0.224, 0.225])
                      ])
     }
-    
+
     image_datasets = {x: GehlerDataset(dir_path = dir_path,
-                                       target_path = target_path,
+                                       load_target=load_target,
                                        transform = data_transforms[x],
                                        remove_cc = True,
                                        seed=12, 
@@ -535,7 +535,7 @@ def get_dataloader(dir_path, target_path=None, fraction=0.7, batch_size=32):
     return dataloaders
     
 
-def get_eval_dataset(dir_path, target_path=None, fraction=0.7) :
+def get_eval_dataset(dir_path, load_target=True, fraction=0.7) :
     
     data_transform = transforms.Compose([
                                      Rescale(230),
@@ -547,9 +547,9 @@ def get_eval_dataset(dir_path, target_path=None, fraction=0.7) :
     
     
     test_dataset = GehlerDataset(dir_path = dir_path,
-                                 target_path = target_path,
+                                 tload_target = True,
                                  transform = data_transform,
-                                 remove_cc = True,
+                                 remove_cc = False,
                                  seed=12, 
                                  fraction=fraction, 
                                  subset='Test')
@@ -598,12 +598,34 @@ if __name__ == "__main__":
 
 
     from utils import reverse_transform
-    image =  image_datasets['Train'][1]['image']
+    image =  image_datasets['Test'][1]['image']
     image = reverse_transform(image)
     print('Dtype : {}'.format(image.dtype))
     print('min : {}'.format(image.min()))
     print('max : {}'.format(image.max()))
     plt.imshow(image)
-
-
+    
+    y_pred = np.zeros((24,3))
+    for i in range(24):
+        y_pred[i] = [i/24,i/24,i/24]
+    
+    
+    def add_mire(err, image, f=10, padd= 5, **kwargs):
+        #Créer petite mire 
+        h,w,_ = image.shape
+        colors = err.reshape((24,3))
+        color_checker = np.zeros((4*f,6*f,3))
+        for idx,color in enumerate(colors):
+            i = idx//6
+            j = idx%6
+            color_checker[i*f:(i+1)*f,j*f:(j+1)*f, 0] = color[0]
+            color_checker[i*f:(i+1)*f,j*f:(j+1)*f, 1] = color[1]
+            color_checker[i*f:(i+1)*f,j*f:(j+1)*f, 2] = color[2]
+        color_checker = color_checker
+        image[h-4*f-padd:h-padd,padd:6*f+padd] = color_checker
+        return image
+        
+    image_mire = add_mire(y_pred,image)
+    plt.figure()
+    plt.imshow(image_mire)
     

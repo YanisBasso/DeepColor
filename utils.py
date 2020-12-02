@@ -156,6 +156,26 @@ def deltaRG(y_pred,y_true):
     deltaRG += np.sqrt((y_pred[2*j] - y_true[2*j])**2 + (y_pred[2*j+1] - y_true[2*j+1])**2)
   return deltaRG/19
 
+def deltaRG_per_patch(y_pred,y_true):
+    deltaRG = np.zeros((19))
+    for i in range(19):
+        deltaRG[i] = np.sum((y_pred[2*i:2*(i+1)] - y_true[2*i:2*(i+1)])**2)
+        deltaRG[i] = np.sqrt(deltaRG[i])
+    return deltaRG
+        
+
+def deltaIll(y_pred,y_true):
+    
+    y_pred = y_pred.reshape((19,2))
+    y_true = y_true.reshape((19,2))
+    errs = np.zeros((24))
+    for i in range(19):
+        a = y_pred[i]
+        b = y_pred[i]
+        c = a.dot(b)/np.sqrt(a.dot(a)*b.dot(b))
+        errs[i] = np.arccos(c)
+    return np.mean(errs)
+
 def deltaE(I,J):
     """
     Delta E error 
@@ -163,6 +183,7 @@ def deltaE(I,J):
     dE = np.sqrt(np.sum((I - J)**2,axis = 2))
     dE = np.mean(dE)
     return dE 
+
 
 ##################################
 # loading function
@@ -325,6 +346,26 @@ def gentab(err,title):
     print('{4}   :  {0:8.2f} {1:8.2f} {2:8.2f} {3:8.2f}'.format(err_mean,err_median,err_qu95,err_max,title))
     print('_'*(45+n))
     
-
+def add_mire(y_pred, image, f=10, padd= 5, **kwargs):
+    h,w,_ = image.shape
+    colors = y_pred.reshape((24,3))
+    color_checker = np.zeros((4*f,6*f,3))
+    for idx,color in enumerate(colors):
+        i = idx//6
+        j = idx%6
+        color_checker[i*f:(i+1)*f,j*f:(j+1)*f, 0] = color[0]
+        color_checker[i*f:(i+1)*f,j*f:(j+1)*f, 1] = color[1]
+        color_checker[i*f:(i+1)*f,j*f:(j+1)*f, 2] = color[2]
+    color_checker = color_checker
+    image[h-4*f-padd:h-padd,padd:6*f+padd] = color_checker
+    return image
     
-
+if __name__=="__main__":
+    
+    a = np.ones((10))
+    b = np.arange((10))
+    print(a)
+    print(b)
+    dRG = deltaRG_per_patch(a,b)
+    print(dRG)
+    
