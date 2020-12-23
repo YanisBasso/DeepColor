@@ -573,6 +573,18 @@ class PrepareTarget(object):
 
 
 def get_dataloader(dir_path, load_target=True, fraction=0.7, batch_size=32):
+    """
+    Prepare a dataloader with the basline data preprocessing protocol 
+    
+    :param dir_path: dataset path 
+    :param load_target: If True, load target from txt file. If False, compute them 
+        from input images
+    :param fraction: Percentage of train sample 
+    :param batch_size: Size of training batches
+    
+    :return: Dict of Dataloader. Key 'Train' for training and key 'Test' for 
+    validation and test
+    """
     data_transforms = {
         'Train': transforms.Compose([ 
            Rescale(225),

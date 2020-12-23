@@ -82,12 +82,14 @@ class Trainer(object):
           
           inputs = sample['image'].to(self.device)
           targets = sample['target'].to(self.device)
+          if self.weighted_loss: 
+              weights = sample['weight'].to(self.device)
           
           with torch.set_grad_enabled(phase == 'Train'):
             outputs = self.model(inputs)
             
-            if weighted_loss :
-                loss = self.criterion(outputs,targets,weigth)
+            if self.weighted_loss :
+                loss = self.criterion(outputs,targets,weigths)
             else:
                 loss = self.criterion(outputs, targets)
             
