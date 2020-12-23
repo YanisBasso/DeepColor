@@ -29,27 +29,31 @@ warnings.filterwarnings("ignore")
 
 class GehlerDataset(Dataset):
     """Regression dataset made from Gehler dataset"""
-    def __init__(self, dir_path, load_target=False, remove_cc=None, seed=None, 
+    def __init__(self, dir_path, load_target=False, load_weight=True, remove_cc=None, seed=None, 
                  fraction=None, subset=None, transform=None, nb_image = None):
         """
         :param dir_path: Name of the path where the images and coordinates 
-            are stored.
-        :param target_path: Name of the cvs file containing target. If None, 
-            the targets are computed from the image.
+                        are stored.
+        :param load_target: If True, targets are load from txt files. If False,
+                        target are computed from images 
+        :param load_weight: If True, weights are load from txt files. If False, 
+                        no weighted are loaded
         :param remove_cc: Boolean which specify if the color checker has to be 
-            hide during image loading.
+                        hide during image loading.
         :param seed: Specify a seed for the train and test split.
         :param fraction: A float value from 0 to 1 which specifies the validation split fraction.
-
         :param subset: 'Train' or 'Test' to select the appropriate set.
         :param transform: Optional transform to be applied on a sample.
+        :param nb_image: Specify the number of image to consider. 
         """
         self.dir_path = Path(dir_path)
         self.img_path = self.dir_path / 'im'
         self.coord_path = self.dir_path / 'coord'
+        self.weight_path = self.dir_path / 'weight'
         self.transform = transform
         self.remove_cc = remove_cc
         self.load_target = load_target
+        self.load_weight = load_weight
         self.nb_image = nb_image
         
         #list image names 
@@ -106,6 +110,9 @@ class GehlerDataset(Dataset):
             img[mask == 255] = 0 
         
         sample = {'image': img, 'target': target}
+        
+        if self.load_weight : 
+            sample['weight'] = self._load_weight(Path(name).stem)
         if self.transform:
             sample = self.transform(sample)
         return sample
@@ -156,6 +163,12 @@ class GehlerDataset(Dataset):
         return targets
     
     def _load_target(self,name):
+        """
+        Load targets from text file 
+        
+        :param name: image name without extension
+        :return: Array of RGB values - mean color for each patch
+        """
         path = self.dir_path / "target" / f"{name}.txt"
         targets = np.zeros((24,3))
         with open(path,"r") as fp :
@@ -165,9 +178,58 @@ class GehlerDataset(Dataset):
                 r,g,b = line.split(',')
                 targets[i,:] = [r,g,b]
         return targets
-            
+    
+    def _load_weight(self,name):
+        """
+        Load weights from text file 
+        
+        :param name: image name without extension
+        :return: Array of size (19,) number of pixel for each class
+        """
+        path = self.weight_path / f"{name}.txt"
+        weights = np.zeros((19,))
+        with open(path,"r") as fp :
+            lines = fp.readlines()
+            for i,line in enumerate(lines) :
+                weights[i] = np.float32(line)
+        return weights
+
+
+    def get_patch_distribution(self,idx):
+        """
+        Function that return the color distribution of each patch of an image
+        
+        :param idx: index of image
+        :return: list of list of pixel values 
+        """
+        if torch.is_tensor(idx):
+            idx = idx.tolist()
+        #get img 
+        name  = self.ids[idx]
+        img_path = str(self.img_path / name)
+        img = io.imread(img_path)
+        img = (img/255).astype(np.float32)
+        
+        if transform:
+            img = self.transform(img)
+        
+        patches_coord = self._get_patches_coordinates(Path(name).stem)
+        patches_coord[:,:,0] = patches_coord[:,:,0]*img.shape[1]
+        patches_coord[:,:,1] = patches_coord[:,:,1]*img.shape[0]
+        color_distributions = []
+        for i,patche in enumerate(patches_coord):
+            pts = patche.astype(np.int32)
+            mask = np.zeros(img.shape[:2], dtype=img.dtype)
+            mask = cv2.fillPoly(mask,[pts],(255,255))
+            pixel_info = img[mask == 255]
+            color_distributions.append(pixel_info)
+        return color_distributions
+        
     
     def get_name(self,idx):
+        """
+        Get image name without extension 
+        """
         return Path(self.ids[idx]).stem
     
 
@@ -240,12 +302,10 @@ class RandomColorShift(object):
         
         #image = linear2srgb(image)
         #target = linear2srgb(target)
-
-        return {'image':image,'target':target}
+        sample['image'] = image
+        sample['target'] = target
         
-        
-        
-        
+        return sample
         
         
 
@@ -324,7 +384,8 @@ class RemoveShading(object):
         image[:,:,1] = image[:,:,1]/lum
         image[:,:,2] = image[:,:,2]/lum
         image = np.nan_to_num(image)
-        image.astype(np.float32)
+        image = image[:,:,:2]
+        image = image.astype(np.float32)
         
         if type(sample) == dict:
             return {'image': image, 'target': target}
@@ -336,23 +397,29 @@ class ToTensor(object):
 
     def __call__(self, sample):
         if type(sample) == dict:
-          image, target = sample['image'], sample['target']
+          
+            # Place Channel dimension in first place
+            image = sample['image']
+            image = image.transpose((2, 0, 1))
+            sample['image'] = image
+          
+            # Convert numpy arrays into torch.tensor
+            for key in sample : 
+                tensor = torch.from_numpy(sample[key]).float()
+                sample[key] = tensor
+                
+            return sample
+        
         elif type(sample) == np.ndarray:
-          image = sample
-
-        image = image.transpose((2, 0, 1))
-
-        if type(sample) == dict:
-          return {'image': torch.from_numpy(image).float(),
-                  'target': torch.from_numpy(target).float()}
-        elif type(sample) == np.ndarray:
-          return torch.from_numpy(image).float()
+            image = sample
+            image = image.transpose((2, 0, 1))
+            return torch.from_numpy(image).float()          
 
 class Rescale(object):
-    """Rescale the image in a sample to a given size.
+    """
+    Rescale the image in a sample to a given size.
 
-    Args:
-        output_size (tuple or int): Desired output size. If tuple, output is
+    : param output_size (tuple or int): Desired output size. If tuple, output is
             matched to output_size. If int, smaller of image edges is matched
             to output_size keeping aspect ratio the same.
     """
@@ -363,9 +430,9 @@ class Rescale(object):
 
     def __call__(self, sample):
       if type(sample) == dict:
-        image,target = sample['image'], sample['target']
+          image,target = sample['image'], sample['target']
       elif type(sample) == np.ndarray:
-        image = sample
+          image = sample
     
       h, w = image.shape[:2]
       if isinstance(self.output_size, int):
@@ -380,12 +447,20 @@ class Rescale(object):
       image = cv2.resize(image, (new_w,new_h), interpolation = cv2.INTER_NEAREST)
       
       if type(sample) == dict:
-        return {'image': image, 'target': target}
+          sample['image'] = image
+          sample['target'] = target
+          return sample
       elif type(sample) == np.ndarray:
-
-        return image
+          return image
 
 class Normalize(object):
+    """
+    Apply Distribution normalisation on RGB channels
+    
+    :param mean: list of means values for each channel
+    :param std: list of standard deviation for each channel
+    :param inplace: boolean. If true normalisation is done in place
+    """
     def __init__(self, mean, std, inplace=False):
         self.mean = mean
         self.std = std
@@ -396,10 +471,15 @@ class Normalize(object):
         return tensor 
     
     def __call__(self,sample):
+        """
+        :param sample: If Numpy array, transformation is applied on the array. 
+                If dict, transformation is applied on the value of key 'image'.
+        """
         if type(sample) == dict:
-            image,target = sample['image'], sample['target']
+            image = sample['image']
             image = self.norm(image)
-            return {'image': image, 'target': target}
+            sample['image'] = image
+            return sample
             
         elif type(sample) in [np.ndarray,torch.Tensor]:
             image = sample
@@ -407,16 +487,20 @@ class Normalize(object):
             return image
 
 class UnNormalize(object):
+    """
+    Remove the effect of distribution normalisation on image
+    
+    :param mean: list of means values for each channel
+    :param std: list of standard deviation values for each channel
+    :param inplace: boolean. If true normalisation is done in place
+    """
     def __init__(self, mean, std):
         self.mean = mean
         self.std = std
 
     def __call__(self, tensor):
         """
-        Args:
-            tensor (Tensor): Tensor image of size (C, H, W) to be normalized.
-        Returns:
-            Tensor: Normalized image.
+        :param tensor (Tensor): Tensor image of size (C, H, W) to be normalized.
         """
         for t, m, s in zip(tensor, self.mean, self.std):
             t.mul_(s).add_(m)
@@ -427,8 +511,7 @@ class UnNormalize(object):
 class RandomCrop(object):
     """Crop randomly the image in a sample.
 
-    Args:
-        output_size (tuple or int): Desired output size. If int, square crop
+    :param output_size (tuple or int): Desired output size. If int, square crop
             is made.
     """
 
@@ -442,9 +525,9 @@ class RandomCrop(object):
 
     def __call__(self, sample):
         if type(sample) == dict:
-          image,target = sample['image'], sample['target']
+            image = sample['image']
         elif type(sample) == np.ndarray:
-          image = sample
+            image = sample
 
         h, w = image.shape[:2]
         new_h, new_w = self.output_size
@@ -456,23 +539,16 @@ class RandomCrop(object):
                       left: left + new_w]
         
         if type(sample) == dict:
-          return {'image': image, 'target': target}
+            sample['image'] = image
+            return sample
         elif type(sample) == np.ndarray:
-          return image
-
-class RemoveShadingTarget(object):
-    
-    def __call__(self,sample):
-        target = sample['target']
-        lum = np.sum(target,axis=1)
-        target[:,0] = target[:,0]/lum
-        target[:,1] = target[:,1]/lum
-        target[:,2] = target[:,2]/lum
-        sample['target'] = target[:,:2]
-        return sample 
+            return image
 
 class PrepareTarget(object):
-    
+    """ 
+    Prepare Target to the desire format : inverse gamma function and 
+    normalisation by triplet RGB brightness (R+G+B).
+    """
     def __call__(self,sample):
         target = sample['target']
         
@@ -492,7 +568,7 @@ class PrepareTarget(object):
         return sample 
     
 ##################################
-# Data preprocessing 
+# Data preprocessing Pipeline 
 ##################################
 
 
@@ -540,7 +616,7 @@ def get_eval_dataset(dir_path, load_target=True, fraction=0.7) :
     data_transform = transforms.Compose([
                                      Rescale(230),
                                      RandomCrop(224),
-                                     RemoveShadingTarget(),
+                                     PrepareTarget(),
                                      ToTensor(),
                                      Normalize(mean=(0.485, 0.456, 0.406),
                                      std=(0.229, 0.224, 0.225))])
@@ -558,74 +634,34 @@ def get_eval_dataset(dir_path, load_target=True, fraction=0.7) :
 
 
 if __name__ == "__main__":
-    
-    
-    data_transforms = {
-        'Train': transforms.Compose([ 
+
+    data_transform = transforms.Compose([
             Rescale(225),
-            RandomCrop(224),
+            RandomCrop((224)),
             RandomColorShift(0.8,1.2),
             RandomFlip(),
             RandomRotate(10,0.5),
             PrepareTarget(),
             ToTensor(),
             Normalize(mean=[0.485, 0.456, 0.406],
-                      std=[0.229, 0.224, 0.225])
-                      ]),
-        'Test': transforms.Compose([
-            Rescale(230),
-            RandomCrop(224),
-            PrepareTarget(),
-            ToTensor(),
-            Normalize(mean=[0.485, 0.456, 0.406],
-                      std=[0.229, 0.224, 0.225])
-                      ])
-    }
+                     std=[0.229, 0.224, 0.225])
+            ])
     
 
-    image_datasets = {x: GehlerDataset(dir_path = "/Users/yanis/GehlerDataset",
-                                        load_target = True,
-                                        transform = data_transforms[x],
-                                        remove_cc = False,
-                                        seed=12, 
-                                        fraction=0.7, 
-                                        subset=x)
-                      for x in ['Train', 'Test']}
+    image_dataset = GehlerDataset(dir_path = "/Users/yanis/GehlerDataset",
+                                  load_target = True,
+                                  load_weight = True,
+                                  transform = data_transform,
+                                  remove_cc = False,
+                                  seed=12, 
+                                  fraction=0.7, 
+                                  subset='Train')
     
-    dataloaders = {x: DataLoader(image_datasets[x], batch_size=32,
-                                  shuffle=True, num_workers=4)
-                    for x in ['Train', 'Test']}
+    sample = image_dataset[1]
+    print('image shape :',sample['image'].shape)
+    print('keys :',sample.keys())
+    print('targets :', sample['target'].shape)
+    print('weights :',sample['weight'].shape)
+    
 
-
-    from utils import reverse_transform
-    image =  image_datasets['Test'][1]['image']
-    image = reverse_transform(image)
-    print('Dtype : {}'.format(image.dtype))
-    print('min : {}'.format(image.min()))
-    print('max : {}'.format(image.max()))
-    plt.imshow(image)
-    
-    y_pred = np.zeros((24,3))
-    for i in range(24):
-        y_pred[i] = [i/24,i/24,i/24]
-    
-    
-    def add_mire(err, image, f=10, padd= 5, **kwargs):
-        #Créer petite mire 
-        h,w,_ = image.shape
-        colors = err.reshape((24,3))
-        color_checker = np.zeros((4*f,6*f,3))
-        for idx,color in enumerate(colors):
-            i = idx//6
-            j = idx%6
-            color_checker[i*f:(i+1)*f,j*f:(j+1)*f, 0] = color[0]
-            color_checker[i*f:(i+1)*f,j*f:(j+1)*f, 1] = color[1]
-            color_checker[i*f:(i+1)*f,j*f:(j+1)*f, 2] = color[2]
-        color_checker = color_checker
-        image[h-4*f-padd:h-padd,padd:6*f+padd] = color_checker
-        return image
-        
-    image_mire = add_mire(y_pred,image)
-    plt.figure()
-    plt.imshow(image_mire)
     

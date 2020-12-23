@@ -20,7 +20,7 @@ class Trainer(object):
   """
   Trainer class
   """
-  def __init__(self,model,dataloaders,optimizer,criterion,metrics,config,lr_scheduler = None):
+  def __init__(self,model,dataloaders,optimizer,criterion,metrics,config,weighted_loss = False,lr_scheduler = None):
     self.config = config
     self.device, device_ids = self._prepare_device(config['n_gpu'])
     print(self.device,device_ids)
@@ -49,7 +49,8 @@ class Trainer(object):
 
     if config.resume is not None:
       self._resume_checkpoint(config.resume)
-
+    
+    self.weighted_loss = weighted_loss
   def train(self):
     """
     Training protocol 
@@ -85,7 +86,10 @@ class Trainer(object):
           with torch.set_grad_enabled(phase == 'Train'):
             outputs = self.model(inputs)
             
-            loss = self.criterion(outputs, targets)
+            if weighted_loss :
+                loss = self.criterion(outputs,targets,weigth)
+            else:
+                loss = self.criterion(outputs, targets)
             
             if self.device == torch.device("cuda:0"):
                 y_pred = outputs.data.cpu().numpy().ravel()

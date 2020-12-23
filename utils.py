@@ -360,12 +360,4 @@ def add_mire(y_pred, image, f=10, padd= 5, **kwargs):
     image[h-4*f-padd:h-padd,padd:6*f+padd] = color_checker
     return image
     
-if __name__=="__main__":
-    
-    a = np.ones((10))
-    b = np.arange((10))
-    print(a)
-    print(b)
-    dRG = deltaRG_per_patch(a,b)
-    print(dRG)
-    
+
