@@ -7,7 +7,7 @@ Created on Mon Dec 21 15:02:35 2020
 """
 
 
-import torch.nn.functional as F
+import torch
 
 
 def mse_loss(input, target):
