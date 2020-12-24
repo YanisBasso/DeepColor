@@ -359,5 +359,54 @@ def add_mire(y_pred, image, f=10, padd= 5, **kwargs):
     color_checker = color_checker
     image[h-4*f-padd:h-padd,padd:6*f+padd] = color_checker
     return image
+
+
+def ellipse_parameter(pixel_info):
+    """
+    Calculates the parameters of the covariance error ellipse associated at each color patche
+    :param pixel_info: pixels values of a given region of interest 
+    :return means: mean color of the ROI 
+    :return largest_eigenval: largest eigen value of the covariance matrix
+    :return smallest_eigenval: smallest eigen value of the covariance matrix
+    :return angle: angle between the x-axis and the direction of the eigen vector associated to the largest eigen value
+    """
+    #Covariance matrix
+    cov = np.cov(pixel_info.transpose())
+    #Calculate the eigenvectors and eigenvalues
+    a = np.linalg.eig(cov)
+    eigenval = a[0]
+    eigenvec = a[1]
+    #Get the index of the lagest and smallest eigenvalue 
+    largest_eigenval_ind = np.argmax(eigenval)
+    largest_eigenval = np.max(eigenval)
+    smallest_eigenval = np.min(eigenval)
+    #Get the corresponding eigenvector 
+    largest_eigenvect = eigenvec[:,largest_eigenval_ind]
+    #Calculate the angle between x-axis and largest eigenvector
+    angle = np.arctan2(largest_eigenvect[1],largest_eigenvect[0])
+    if angle < 0:
+        angle = angle + 2*np.pi
+    
+    #get mean
+    means = np.mean(pixel_info, axis = 0)
+    return means,largest_eigenval,smallest_eigenval,angle
+
+def add_ellipse(mean,lamda1,lambda2,phi,thresh = 5.991,color = '#cccccc',ax=None):
+    from matplotlib.patches import Ellipse
+    
+    ax = ax or plt.gca()
+    center = (mean[0],mean[1])
+    w = 2*np.sqrt(thresh*lamda1)
+    h = 2*np.sqrt(thresh*lambda2)
+    phi = phi*180/np.pi
+    ellipse = Ellipse(center,
+            width=w,
+            height=h,
+            angle=phi,
+            edgecolor='black',
+            facecolor=color,
+            linewidth = 1.5,
+            alpha=0.7)
+    ax.add_patch(ellipse)
     
 
