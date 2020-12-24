@@ -120,6 +120,11 @@ class GehlerDataset(Dataset):
     
     def _get_mire_coordinates(self,name):
         """
+        Get color checker coordinates in normalized coordinate 
+        
+        :param name: image name without extension
+        :return: Normalized position of the color checker's corners in the 
+            following order : Upper-Left/Upper-Right/Lower-Right/Lower-Left
         """
         path = self.coord_path / '{}_macbeth.txt'.format(name)
         with open(path) as fp :
@@ -137,6 +142,13 @@ class GehlerDataset(Dataset):
         return mire_coord 
     
     def _get_patches_coordinates(self,name):
+        """
+        Get color patches coordinates in normalized coordinate 
+        
+        :param name: image name without extension
+        :return: Normalized positions of the color patches's corners in the 
+            following order : Upper-Left/Upper-Right/Lower-Right/Lower-Left. 
+        """
         path = self.coord_path / '{}_macbeth.txt'.format(name)
         with open(path) as fp :
             lines = fp.readlines()
@@ -187,7 +199,7 @@ class GehlerDataset(Dataset):
         :return: Array of size (19,) number of pixel for each class
         """
         path = self.weight_path / f"{name}.txt"
-        weights = np.zeros((19,))
+        weights = np.zeros((38,))
         with open(path,"r") as fp :
             lines = fp.readlines()
             for i,line in enumerate(lines) :
