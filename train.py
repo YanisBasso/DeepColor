@@ -89,7 +89,7 @@ class Trainer(object):
             outputs = self.model(inputs)
             
             if self.weighted_loss :
-                loss = self.criterion(outputs,targets,weigths)
+                loss = self.criterion(outputs,targets,weights)
             else:
                 loss = self.criterion(outputs, targets)
             
