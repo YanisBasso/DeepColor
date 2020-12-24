@@ -148,6 +148,7 @@ class GehlerDataset(Dataset):
         :param name: image name without extension
         :return: Normalized positions of the color patches's corners in the 
             following order : Upper-Left/Upper-Right/Lower-Right/Lower-Left. 
+            The 24 patches are given from left to right and top to bottom. 
         """
         path = self.coord_path / '{}_macbeth.txt'.format(name)
         with open(path) as fp :
@@ -163,6 +164,14 @@ class GehlerDataset(Dataset):
         return patches_coord
     
     def _extract_target(self,patches_coord,img):
+        """
+        Extract mean RGB values for each color patches
+        
+        :param patches_coord: Normalized Patches coord.
+        :param img: Input image. 
+        
+        :return: (24,3) Array of Mean RGB values. 
+        """
         patches_coord[:,:,0] = patches_coord[:,:,0]*img.shape[1]
         patches_coord[:,:,1] = patches_coord[:,:,1]*img.shape[0]
         targets = np.zeros((24,3))
@@ -252,6 +261,9 @@ class GehlerDataset(Dataset):
 class RandomFlip(object):
     """
     Data augmentation - Random horizontal and vertical flip
+    
+    :param p_vert: Probability of vertical flipping. 
+    :param p_hor: Probability of horizontal flipping. 
     """   
     def __init__(self,p_vert=0.5,p_hor=0.5):
         self.p_vert = p_vert
@@ -272,6 +284,9 @@ class RandomFlip(object):
 class RandomRotate(object):
     """
     Data augmentation - Random Rotation 
+    
+    :param angle_max: Maximum angle of rotation (in degree)
+    :param p: Probability of rotation 
     """
     def __init__(self,angle_max,p):
         self.angle_max = angle_max
@@ -289,7 +304,10 @@ class RandomRotate(object):
 
 class RandomColorShift(object):
     """
-    Data augmentation - Random Rotation 
+    Data augmentation - Random ColorShift
+    
+    :param min_value: Minimum color rescale value
+    :param max_values: Maximum color rescale value 
     """
     def __init__(self,min_value,max_value):
         assert max_value > min_value
