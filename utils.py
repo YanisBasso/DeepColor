@@ -333,6 +333,14 @@ def showResult(model,dataset,transform,ind,**kwargs):
     ax4.set_title('RG Histogramm',**kwargs)
   
 def gentab(err,title):
+    """
+    Generate an error table from an error distribution 
+    Compute and print the mean error, the median error, the 95% quantile and 
+    the max error encounter during evaluation test. 
+    
+    :param err: list of errors
+    :param title: String. Name of the metric evaluated
+    """
     n = len(title)
     if type(err) == np.ndarray:
         err = err.tolist()
@@ -363,12 +371,15 @@ def add_mire(y_pred, image, f=10, padd= 5, **kwargs):
 
 def ellipse_parameter(pixel_info):
     """
-    Calculates the parameters of the covariance error ellipse associated at each color patche
+    Calculates the parameters of the covariance error ellipse associated at 
+    each color patche
+    
     :param pixel_info: pixels values of a given region of interest 
     :return means: mean color of the ROI 
     :return largest_eigenval: largest eigen value of the covariance matrix
     :return smallest_eigenval: smallest eigen value of the covariance matrix
-    :return angle: angle between the x-axis and the direction of the eigen vector associated to the largest eigen value
+    :return angle: angle between the x-axis and the direction of the eigen 
+        vector associated to the largest eigen value
     """
     #Covariance matrix
     cov = np.cov(pixel_info.transpose())
@@ -392,6 +403,19 @@ def ellipse_parameter(pixel_info):
     return means,largest_eigenval,smallest_eigenval,angle
 
 def add_ellipse(mean,lamda1,lambda2,phi,thresh = 5.991,color = '#cccccc',ax=None):
+    """
+    Add a confidence ellipse from a given 2D gaussian distribution 
+    
+    :param mean: Mean value 
+    :param lambda1: largest eigen value of the covariance matrix
+    :param lambda2: smallest eigen value of the covaraince matrix 
+    :param phi: angle between the x-axis and the direction of the eigen vector 
+        associated to the largest eigen value
+        
+    :param thresh: ellipse threshold 
+    :param color: Plotting color 
+    :param ax: matplolib ax where the ellipse will be added
+    """
     from matplotlib.patches import Ellipse
     
     ax = ax or plt.gca()
